@@ -5,7 +5,7 @@ import retrofit2.Response
 import retrofit2.http.*
 
 interface AuthApiService {
-    @POST("auth/login")
+    @POST("tether/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 }
 
