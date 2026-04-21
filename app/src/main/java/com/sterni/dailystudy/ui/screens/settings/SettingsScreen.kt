@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.sterni.dailystudy.BuildConfig
 import com.sterni.dailystudy.admin.TetherPolicyManager
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
