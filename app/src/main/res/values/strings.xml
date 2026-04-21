@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Tether</string>
+    <string name="accessibility_service_description">Tether משתמשת בהרשאת נגישות כדי למנוע הסרת התקנה לא מורשית של האפליקציה.</string>
 </resources>

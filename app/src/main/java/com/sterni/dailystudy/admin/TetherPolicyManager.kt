@@ -9,6 +9,9 @@ import com.google.gson.Gson
 import com.sterni.dailystudy.data.model.BlockedActionBehavior
 import com.sterni.dailystudy.data.model.CommunityPolicy
 
+import android.content.Intent
+import com.sterni.dailystudy.data.model.WebFilterMode
+
 object TetherPolicyManager {
 
     private const val TAG = "TetherPolicy"
@@ -17,6 +20,7 @@ object TetherPolicyManager {
     private const val KEY_DEVICE_ID = "device_id"
     private const val KEY_COMMUNITY_ID = "community_id"
     private const val KEY_COMMUNITY_NAME = "community_name"
+    private const val KEY_ALLOW_UNINSTALL = "allow_uninstall"
 
     private val gson = Gson()
 
@@ -30,6 +34,7 @@ object TetherPolicyManager {
     fun applyPolicy(context: Context, policy: CommunityPolicy) {
         savePolicy(context, policy)
         applyStoredPolicy(context)
+        applyWebFilter(context, policy)
     }
 
     fun applyStoredPolicy(context: Context) {
@@ -38,7 +43,6 @@ object TetherPolicyManager {
 
         if (!dpm.isDeviceOwnerApp(context.packageName)) {
             Log.w(TAG, "Not device owner — policy enforcement limited")
-            return
         }
 
         try {
@@ -49,11 +53,13 @@ object TetherPolicyManager {
             applyHiddenApps(dpm, context, policy.hideGooglePlay, policy.blockedApps)
             applyAntiBypassRestrictions(dpm, context, true)
 
-            // Prevent uninstallation of Tether itself
+            // Prevent uninstallation of Tether itself (requires Device Owner)
             val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
             dpm.setUninstallBlocked(admin, context.packageName, true)
 
             Log.i(TAG, "Policy applied successfully")
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Some restrictions require Device Owner: ${e.message}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply policy: ${e.message}")
         }
@@ -147,8 +153,29 @@ object TetherPolicyManager {
 
     fun isEnrolled(context: Context): Boolean = getDeviceId(context) != null
 
+    fun saveAllowUninstall(context: Context, allow: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_ALLOW_UNINSTALL, allow)
+            .apply()
+    }
+
+    fun isUninstallAllowed(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_ALLOW_UNINSTALL, false)
+
     fun clearEnrollment(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+    }
+
+    fun applyWebFilter(context: Context, policy: CommunityPolicy) {
+        if (policy.webFilterMode != WebFilterMode.NONE) {
+            context.startForegroundService(Intent(context, TetherVpnService::class.java))
+            context.startForegroundService(Intent(context, TetherOverlayService::class.java))
+        } else {
+            context.startService(Intent(context, TetherVpnService::class.java).apply {
+                action = "STOP"
+            })
+        }
     }
 
     private fun applyAntiBypassRestrictions(dpm: DevicePolicyManager, context: Context, block: Boolean) {

@@ -43,6 +43,7 @@ ehthumbs.db
 # Keystore files
 *.jks
 *.keystore
+keystore.properties
 
 # Other
 *~

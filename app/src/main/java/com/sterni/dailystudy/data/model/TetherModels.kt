@@ -18,13 +18,22 @@ data class CommunityPolicy(
     val allowedApps: List<String> = emptyList(),
     val blockedApps: List<String> = emptyList(),
     val blockedActionBehavior: BlockedActionBehavior = BlockedActionBehavior.SILENT,
-    val logsEnabled: Boolean = false
+    val logsEnabled: Boolean = false,
+    val webFilterMode: WebFilterMode = WebFilterMode.NONE,
+    val allowedDomains: List<String> = emptyList(),
+    val blockedDomains: List<String> = emptyList()
 )
 
 enum class BlockedActionBehavior {
     SILENT,
     SHOW_MESSAGE,
     REQUEST_APPROVAL
+}
+
+enum class WebFilterMode {
+    NONE,
+    BLACKLIST,
+    WHITELIST
 }
 
 data class TetherDevice(
@@ -50,7 +59,8 @@ data class JoinCommunityResponse(
 )
 
 data class PolicyUpdateResponse(
-    val policy: CommunityPolicy
+    val policy: CommunityPolicy,
+    val allowUninstall: Boolean = false
 )
 
 data class ApprovalRequest(

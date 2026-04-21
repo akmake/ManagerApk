@@ -1,5 +1,7 @@
 package com.sterni.dailystudy.ui.screens.home
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -11,9 +13,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sterni.dailystudy.ui.screens.join.isAccessibilityEnabled
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -25,8 +29,10 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     onEnterAdmin: () -> Unit
 ) {
+    val context = LocalContext.current
     var adminHoldCount by remember { mutableIntStateOf(0) }
     var showAdminDialog by remember { mutableStateOf(false) }
+    val accessibilityEnabled = remember { isAccessibilityEnabled(context) }
 
     if (showAdminDialog) {
         AlertDialog(
@@ -139,6 +145,35 @@ fun HomeScreen(
                             else "הגנה חלקית — מומלץ להפעיל Device Owner",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Warning banner if accessibility is disabled
+            if (!accessibilityEnabled) {
+                Spacer(Modifier.height(12.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    onClick = {
+                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        })
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "הגנת מחיקה כבויה — לחץ להפעלה",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }

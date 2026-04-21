@@ -9,12 +9,14 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.sterni.dailystudy.admin.AdminSession
 import com.sterni.dailystudy.ui.screens.admin.*
 
 sealed class AdminScreen(val route: String) {
@@ -33,7 +35,8 @@ sealed class AdminScreen(val route: String) {
         fun route(code: String, name: String) =
             "admin_share/${encode(code)}/${encode(name)}"
     }
-    object ManageAdmins : AdminScreen("admin_manage_admins")
+    object ManageAdmins  : AdminScreen("admin_manage_admins")
+    object Provisioning  : AdminScreen("admin_provisioning")
 }
 
 private fun encode(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
@@ -50,6 +53,9 @@ fun AdminNavGraph(
     navController: NavHostController,
     onExit: () -> Unit
 ) {
+    val context = LocalContext.current
+    val startDestination = if (AdminSession.isLoggedIn(context))
+        AdminScreen.Dashboard.route else AdminScreen.Login.route
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
@@ -96,7 +102,7 @@ fun AdminNavGraph(
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = AdminScreen.Login.route,
+            startDestination = startDestination,
             modifier = androidx.compose.ui.Modifier.padding(padding)
         ) {
 
@@ -123,8 +129,15 @@ fun AdminNavGraph(
                             launchSingleTop = true
                         }
                     },
+                    onProvisioningClick = {
+                        navController.navigate(AdminScreen.Provisioning.route)
+                    },
                     onLogout = onExit
                 )
+            }
+
+            composable(AdminScreen.Provisioning.route) {
+                ProvisioningQrScreen(onBack = { navController.popBackStack() })
             }
 
             composable(AdminScreen.Communities.route) {

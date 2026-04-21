@@ -28,7 +28,8 @@ class PolicySyncWorker(
             val response = api.getPolicy(deviceId)
 
             if (response.isSuccessful) {
-                val policy = response.body()?.policy
+                val body = response.body()
+                val policy = body?.policy
                 if (policy != null) {
                     val current = TetherPolicyManager.loadPolicy(context)
                     if (current != policy) {
@@ -36,6 +37,8 @@ class PolicySyncWorker(
                         Log.i(TAG, "Policy updated and applied")
                     }
                 }
+                val allowUninstall = body?.allowUninstall ?: false
+                TetherPolicyManager.saveAllowUninstall(context, allowUninstall)
                 Result.success()
             } else {
                 Log.w(TAG, "Policy fetch failed: ${response.code()}")

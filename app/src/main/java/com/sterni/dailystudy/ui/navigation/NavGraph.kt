@@ -10,7 +10,13 @@ import androidx.navigation.NavType
 import com.sterni.dailystudy.admin.TetherPolicyManager
 import com.sterni.dailystudy.ui.screens.calendar.CalendarScreen
 import com.sterni.dailystudy.ui.screens.home.HomeScreen
-import com.sterni.dailystudy.ui.screens.join.*
+import com.sterni.dailystudy.ui.screens.join.AccessibilityPermissionScreen
+import com.sterni.dailystudy.ui.screens.join.VpnPermissionScreen
+import com.sterni.dailystudy.ui.screens.join.CommunityFoundScreen
+import com.sterni.dailystudy.ui.screens.join.DeviceAdminPermissionScreen
+import com.sterni.dailystudy.ui.screens.join.EnrollmentSuccessScreen
+import com.sterni.dailystudy.ui.screens.join.JoinCommunityScreen
+import com.sterni.dailystudy.ui.screens.join.QrScannerScreen
 import com.sterni.dailystudy.ui.screens.news.NewsScreen
 import com.sterni.dailystudy.ui.screens.onboarding.OnboardingScreen
 import com.sterni.dailystudy.ui.screens.settings.SettingsScreen
@@ -24,7 +30,9 @@ sealed class Screen(val route: String) {
         fun createRoute(code: String, name: String) =
             "community_found/${encode(code)}/${encode(name)}"
     }
-    object DeviceAdmin       : Screen("device_admin")
+    object DeviceAdmin            : Screen("device_admin")
+    object AccessibilityPermission: Screen("accessibility_permission")
+    object VpnPermission          : Screen("vpn_permission")
     object EnrollmentSuccess : Screen("enrollment_success/{name}") {
         fun createRoute(name: String) = "enrollment_success/${encode(name)}"
     }
@@ -92,6 +100,22 @@ fun NavGraph(
 
         composable(Screen.DeviceAdmin.route) {
             DeviceAdminPermissionScreen(
+                onGranted = {
+                    navController.navigate(Screen.AccessibilityPermission.route)
+                }
+            )
+        }
+
+        composable(Screen.AccessibilityPermission.route) {
+            AccessibilityPermissionScreen(
+                onGranted = {
+                    navController.navigate(Screen.VpnPermission.route)
+                }
+            )
+        }
+
+        composable(Screen.VpnPermission.route) {
+            VpnPermissionScreen(
                 onGranted = {
                     val communityName = TetherPolicyManager.getCommunityName(context) ?: ""
                     navController.navigate(Screen.EnrollmentSuccess.createRoute(communityName)) {

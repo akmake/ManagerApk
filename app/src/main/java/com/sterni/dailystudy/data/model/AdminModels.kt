@@ -40,6 +40,7 @@ data class AdminDevice(
     val deviceModel: String,
     val communityId: String,
     val isDeviceOwner: Boolean,
+    val allowUninstall: Boolean = false,
     val lastSeen: String,
     val active: Boolean,
     val createdAt: String

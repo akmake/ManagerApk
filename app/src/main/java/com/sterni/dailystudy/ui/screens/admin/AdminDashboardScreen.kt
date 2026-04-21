@@ -60,6 +60,7 @@ class AdminDashboardViewModel(app: Application) : AndroidViewModel(app) {
 fun AdminDashboardScreen(
     onCommunitiesClick: () -> Unit,
     onApprovalsClick: () -> Unit,
+    onProvisioningClick: () -> Unit,
     onLogout: () -> Unit,
     vm: AdminDashboardViewModel = viewModel()
 ) {
@@ -102,6 +103,20 @@ fun AdminDashboardScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item { Spacer(Modifier.height(4.dp)) }
+
+            // Provisioning button
+            item {
+                Button(
+                    onClick = onProvisioningClick,
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                ) {
+                    Icon(Icons.Default.QrCode, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("QR הגדרת מכשיר חדש", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
             item { Spacer(Modifier.height(4.dp)) }
 
             // Stats grid

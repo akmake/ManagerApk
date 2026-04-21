@@ -48,6 +48,13 @@ interface AdminApiService {
     ): Response<Unit>
 
     // Devices
+    @PUT("tether/admin/devices/{deviceId}/allow-uninstall")
+    suspend fun setAllowUninstall(
+        @Header("Authorization") token: String,
+        @Path("deviceId") deviceId: String,
+        @Body body: Map<String, Boolean>
+    ): Response<Map<String, Boolean>>
+
     @DELETE("tether/admin/devices/{deviceId}")
     suspend fun removeDevice(
         @Header("Authorization") token: String,

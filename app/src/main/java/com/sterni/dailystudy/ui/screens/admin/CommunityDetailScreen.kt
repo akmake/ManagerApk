@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +25,7 @@ import com.sterni.dailystudy.data.api.RetrofitClient
 import com.sterni.dailystudy.data.model.AdminCommunity
 import com.sterni.dailystudy.data.model.AdminDevice
 import com.sterni.dailystudy.data.model.CommunityPolicy
+import com.sterni.dailystudy.data.model.WebFilterMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -71,6 +73,17 @@ class CommunityDetailViewModel(app: Application) : AndroidViewModel(app) {
             } catch (_: Exception) {}
         }
     }
+
+    fun toggleAllowUninstall(token: String, deviceId: String, allow: Boolean) {
+        viewModelScope.launch {
+            try {
+                api.setAllowUninstall(token, deviceId, mapOf("allowUninstall" to allow))
+                _devices.value = _devices.value.map {
+                    if (it.deviceId == deviceId) it.copy(allowUninstall = allow) else it
+                }
+            } catch (_: Exception) {}
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,7 +126,11 @@ fun CommunityDetailScreen(
             }
 
             when (selectedTab) {
-                0 -> DevicesTab(devices = devices, onRemove = { vm.removeDevice(token, it) })
+                0 -> DevicesTab(
+                    devices = devices,
+                    onRemove = { vm.removeDevice(token, it) },
+                    onToggleUninstall = { deviceId, allow -> vm.toggleAllowUninstall(token, deviceId, allow) }
+                )
                 1 -> PolicyTab(
                     policy = community?.policy,
                     onSave = { policy -> community?.let { vm.updatePolicy(token, it.id, policy) } }
@@ -125,7 +142,11 @@ fun CommunityDetailScreen(
 }
 
 @Composable
-private fun DevicesTab(devices: List<AdminDevice>, onRemove: (String) -> Unit) {
+private fun DevicesTab(
+    devices: List<AdminDevice>,
+    onRemove: (String) -> Unit,
+    onToggleUninstall: (String, Boolean) -> Unit
+) {
     var confirmDevice by remember { mutableStateOf<AdminDevice?>(null) }
 
     if (devices.isEmpty()) {
@@ -141,8 +162,13 @@ private fun DevicesTab(devices: List<AdminDevice>, onRemove: (String) -> Unit) {
     ) {
         item { Spacer(Modifier.height(8.dp)) }
         items(devices) { device ->
-            DeviceCard(device = device, onRemove = { confirmDevice = device })
+            DeviceCard(
+                device = device,
+                onRemove = { confirmDevice = device },
+                onToggleUninstall = { allow -> onToggleUninstall(device.deviceId, allow) }
+            )
         }
+        item { Spacer(Modifier.height(80.dp)) }
     }
 
     confirmDevice?.let { device ->
@@ -163,27 +189,45 @@ private fun DevicesTab(devices: List<AdminDevice>, onRemove: (String) -> Unit) {
 }
 
 @Composable
-private fun DeviceCard(device: AdminDevice, onRemove: () -> Unit) {
+private fun DeviceCard(device: AdminDevice, onRemove: () -> Unit, onToggleUninstall: (Boolean) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(device.deviceModel, fontWeight = FontWeight.Medium)
-                Spacer(Modifier.height(2.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (device.isDeviceOwner) {
-                        Surface(shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.secondaryContainer) {
-                            Text("Device Owner",
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(device.deviceModel, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(2.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (device.isDeviceOwner) {
+                            Surface(shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.secondaryContainer) {
+                                Text("Device Owner",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+                            }
                         }
+                        Text("נראה: ${device.lastSeen}", fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Text("נראה: ${device.lastSeen}", fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Default.PersonRemove, "הסר", tint = MaterialTheme.colorScheme.error)
                 }
             }
-            IconButton(onClick = onRemove) {
-                Icon(Icons.Default.PersonRemove, "הסר", tint = MaterialTheme.colorScheme.error)
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("אפשר הסרת אפליקציה", fontSize = 13.sp, modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Switch(
+                    checked = device.allowUninstall,
+                    onCheckedChange = onToggleUninstall,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.error,
+                        checkedTrackColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                )
             }
         }
     }
@@ -194,12 +238,9 @@ private fun PolicyTab(policy: CommunityPolicy?, onSave: (CommunityPolicy) -> Uni
     if (policy == null) return
     var edited by remember(policy) { mutableStateOf(policy) }
     var saved by remember { mutableStateOf(false) }
+    var newDomain by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         LazyColumn(modifier = Modifier.weight(1f)) {
             item {
                 PolicySection("חסימות") {
@@ -211,6 +252,76 @@ private fun PolicyTab(policy: CommunityPolicy?, onSave: (CommunityPolicy) -> Uni
                     PolicyToggle("אפשר לוגים", edited.logsEnabled) { edited = edited.copy(logsEnabled = it) }
                 }
             }
+
+            item {
+                Spacer(Modifier.height(8.dp))
+                Text("סינון דפדפן", fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        WebFilterMode.values().forEach { mode ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                RadioButton(
+                                    selected = edited.webFilterMode == mode,
+                                    onClick = { edited = edited.copy(webFilterMode = mode) }
+                                )
+                                Text(
+                                    text = when (mode) {
+                                        WebFilterMode.NONE -> "ללא סינון"
+                                        WebFilterMode.BLACKLIST -> "רשימה שחורה (חסום דומיינים)"
+                                        WebFilterMode.WHITELIST -> "רשימה לבנה (אפשר רק דומיינים)"
+                                    },
+                                    fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (edited.webFilterMode == WebFilterMode.BLACKLIST) {
+                item {
+                    DomainListSection(
+                        title = "דומיינים חסומים",
+                        domains = edited.blockedDomains,
+                        newDomain = newDomain,
+                        onNewDomainChange = { newDomain = it },
+                        onAdd = {
+                            val d = newDomain.trim().lowercase()
+                            if (d.isNotEmpty() && d !in edited.blockedDomains) {
+                                edited = edited.copy(blockedDomains = edited.blockedDomains + d)
+                                newDomain = ""
+                            }
+                        },
+                        onRemove = { d -> edited = edited.copy(blockedDomains = edited.blockedDomains - d) }
+                    )
+                }
+            }
+
+            if (edited.webFilterMode == WebFilterMode.WHITELIST) {
+                item {
+                    DomainListSection(
+                        title = "דומיינים מותרים",
+                        domains = edited.allowedDomains,
+                        newDomain = newDomain,
+                        onNewDomainChange = { newDomain = it },
+                        onAdd = {
+                            val d = newDomain.trim().lowercase()
+                            if (d.isNotEmpty() && d !in edited.allowedDomains) {
+                                edited = edited.copy(allowedDomains = edited.allowedDomains + d)
+                                newDomain = ""
+                            }
+                        },
+                        onRemove = { d -> edited = edited.copy(allowedDomains = edited.allowedDomains - d) }
+                    )
+                }
+            }
+
+            item { Spacer(Modifier.height(8.dp)) }
         }
 
         if (saved) {
@@ -222,6 +333,55 @@ private fun PolicyTab(policy: CommunityPolicy?, onSave: (CommunityPolicy) -> Uni
             onClick = { onSave(edited); saved = true },
             modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp).height(52.dp)
         ) { Text("שמור שינויים", fontSize = 16.sp) }
+    }
+}
+
+@Composable
+private fun DomainListSection(
+    title: String,
+    domains: List<String>,
+    newDomain: String,
+    onNewDomainChange: (String) -> Unit,
+    onAdd: () -> Unit,
+    onRemove: (String) -> Unit
+) {
+    Spacer(Modifier.height(8.dp))
+    Text(title, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+        color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 4.dp))
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = newDomain,
+                    onValueChange = onNewDomainChange,
+                    label = { Text("דומיין (לדוגמה: youtube.com)") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = onAdd) {
+                    Icon(Icons.Default.Add, "הוסף", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+            if (domains.isEmpty()) {
+                Text("אין דומיינים ברשימה", fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp))
+            } else {
+                domains.forEach { domain ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(domain, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { onRemove(domain) }, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Close, "הסר", tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
