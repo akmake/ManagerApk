@@ -69,6 +69,7 @@ fun ApprovalRequestsScreen(
     LaunchedEffect(Unit) { vm.load(token) }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
                 title = {

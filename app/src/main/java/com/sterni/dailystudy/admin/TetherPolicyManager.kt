@@ -47,6 +47,12 @@ object TetherPolicyManager {
             applyFactoryResetRestriction(dpm, context, policy.blockFactoryReset)
             applyUsbRestriction(dpm, context, policy.blockUsbTransfer)
             applyHiddenApps(dpm, context, policy.hideGooglePlay, policy.blockedApps)
+            applyAntiBypassRestrictions(dpm, context, true)
+
+            // Prevent uninstallation of Tether itself
+            val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+            dpm.setUninstallBlocked(admin, context.packageName, true)
+
             Log.i(TAG, "Policy applied successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply policy: ${e.message}")
@@ -143,5 +149,24 @@ object TetherPolicyManager {
 
     fun clearEnrollment(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+    }
+
+    private fun applyAntiBypassRestrictions(dpm: DevicePolicyManager, context: Context, block: Boolean) {
+        val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+
+        if (block) {
+            // Prevent creating a "guest" user that would bypass restrictions
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_ADD_USER)
+
+            // Prevent enabling developer mode and ADB debugging
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_DEBUGGING_FEATURES)
+
+            // Critical! Prevents user from clearing app data or force-stopping the app in Settings
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_APPS_CONTROL)
+        } else {
+            dpm.clearUserRestriction(admin, UserManager.DISALLOW_ADD_USER)
+            dpm.clearUserRestriction(admin, UserManager.DISALLOW_DEBUGGING_FEATURES)
+            dpm.clearUserRestriction(admin, UserManager.DISALLOW_APPS_CONTROL)
+        }
     }
 }

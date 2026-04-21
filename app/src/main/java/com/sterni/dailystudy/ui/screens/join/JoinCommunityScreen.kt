@@ -1,5 +1,7 @@
 package com.sterni.dailystudy.ui.screens.join
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,14 +21,17 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun JoinCommunityScreen(
     onCommunityFound: (code: String, communityName: String) -> Unit,
+    onEnterAdmin: () -> Unit = {},
     vm: JoinCommunityViewModel = viewModel()
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     var showQrScanner by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
+    var logoTapCount by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(state) {
         if (state is JoinState.CommunityFound) {
@@ -59,7 +64,17 @@ fun JoinCommunityScreen(
             text = "Tether",
             fontSize = 36.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.combinedClickable(
+                onClick = {
+                    logoTapCount++
+                    if (logoTapCount >= 7) {
+                        logoTapCount = 0
+                        onEnterAdmin()
+                    }
+                },
+                onLongClick = {}
+            )
         )
         Spacer(Modifier.height(4.dp))
         Text(

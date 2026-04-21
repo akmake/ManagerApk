@@ -68,7 +68,8 @@ fun NavGraph(
             JoinCommunityScreen(
                 onCommunityFound = { code, name ->
                     navController.navigate(Screen.CommunityFound.createRoute(code, name))
-                }
+                },
+                onEnterAdmin = onEnterAdmin
             )
         }
 
