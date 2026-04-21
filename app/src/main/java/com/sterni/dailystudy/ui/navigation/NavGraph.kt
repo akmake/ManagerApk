@@ -17,38 +17,39 @@ import com.sterni.dailystudy.ui.screens.settings.SettingsScreen
 import com.sterni.dailystudy.ui.screens.splash.SplashScreen
 
 sealed class Screen(val route: String) {
-    object Splash      : Screen("splash")
-    object Onboarding  : Screen("onboarding")
-    object Join        : Screen("join")
-    object CommunityFound : Screen("community_found/{code}/{name}") {
+    object Splash            : Screen("splash")
+    object Onboarding        : Screen("onboarding")
+    object Join              : Screen("join")
+    object CommunityFound    : Screen("community_found/{code}/{name}") {
         fun createRoute(code: String, name: String) =
             "community_found/${encode(code)}/${encode(name)}"
     }
-    object DeviceAdmin : Screen("device_admin")
+    object DeviceAdmin       : Screen("device_admin")
     object EnrollmentSuccess : Screen("enrollment_success/{name}") {
         fun createRoute(name: String) = "enrollment_success/${encode(name)}"
     }
-    object Home        : Screen("home")
-    object Calendar    : Screen("calendar")
-    object News        : Screen("news")
-    object Settings    : Screen("settings")
+    object Home     : Screen("home")
+    object Calendar : Screen("calendar")
+    object News     : Screen("news")
+    object Settings : Screen("settings")
 }
 
 private fun encode(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
 private fun decode(s: String) = java.net.URLDecoder.decode(s, "UTF-8")
 
 @Composable
-fun NavGraph(navController: NavHostController) {
+fun NavGraph(
+    navController: NavHostController,
+    onEnterAdmin: () -> Unit
+) {
     val context = LocalContext.current
 
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
 
         composable(Screen.Splash.route) {
             SplashScreen(onFinished = {
-                val dest = when {
-                    TetherPolicyManager.isEnrolled(context) -> Screen.Home.route
-                    else -> Screen.Onboarding.route
-                }
+                val dest = if (TetherPolicyManager.isEnrolled(context))
+                    Screen.Home.route else Screen.Onboarding.route
                 navController.navigate(dest) {
                     popUpTo(Screen.Splash.route) { inclusive = true }
                 }
@@ -80,18 +81,10 @@ fun NavGraph(navController: NavHostController) {
         ) { back ->
             val code = decode(back.arguments?.getString("code") ?: "")
             val name = decode(back.arguments?.getString("name") ?: "")
-
-            // Shared ViewModel for join flow
-            val parentEntry = remember(back) {
-                navController.getBackStackEntry(Screen.Join.route)
-            }
-
             CommunityFoundScreen(
                 code = code,
                 communityName = name,
-                onConfirmed = {
-                    navController.navigate(Screen.DeviceAdmin.route)
-                },
+                onConfirmed = { navController.navigate(Screen.DeviceAdmin.route) },
                 onCancel = { navController.popBackStack() }
             )
         }
@@ -130,7 +123,8 @@ fun NavGraph(navController: NavHostController) {
                 isDeviceOwner = isDeviceOwner,
                 onCalendarClick  = { navController.navigate(Screen.Calendar.route) },
                 onNewsClick      = { navController.navigate(Screen.News.route) },
-                onSettingsClick  = { navController.navigate(Screen.Settings.route) }
+                onSettingsClick  = { navController.navigate(Screen.Settings.route) },
+                onEnterAdmin     = onEnterAdmin
             )
         }
 

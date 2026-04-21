@@ -88,6 +88,9 @@ dependencies {
     // ZXing (QR generation)
     implementation(libs.zxing.core)
 
+    // KosherJava (Jewish Calendar)
+    implementation("com.kosherjava:zmanim:2.5.0")
+
     // Accompanist permissions
     implementation(libs.accompanist.permissions)
 

@@ -44,21 +44,21 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideApiService(retrofit: Retrofit): ApiService =
-        retrofit.create(ApiService::class.java)
+    fun provideAuthApiService(retrofit: Retrofit): AuthApiService =
+        retrofit.create(AuthApiService::class.java)
 
     @Provides
     @Singleton
-    fun provideZmanimService(retrofit: Retrofit): ZmanimService =
-        retrofit.create(ZmanimService::class.java)
+    fun provideAdminApiService(retrofit: Retrofit): AdminApiService =
+        retrofit.create(AdminApiService::class.java)
 
     @Provides
     @Singleton
-    fun provideArticleService(retrofit: Retrofit): ArticleService =
-        retrofit.create(ArticleService::class.java)
+    fun provideNewsService(retrofit: Retrofit): NewsService =
+        retrofit.create(NewsService::class.java)
 
     @Provides
     @Singleton
-    fun provideUserService(retrofit: Retrofit): UserService =
-        retrofit.create(UserService::class.java)
+    fun provideTetherApiService(retrofit: Retrofit): TetherApiService =
+        retrofit.create(TetherApiService::class.java)
 }

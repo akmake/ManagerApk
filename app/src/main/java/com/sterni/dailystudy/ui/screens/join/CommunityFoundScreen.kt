@@ -7,9 +7,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +27,10 @@ fun CommunityFoundScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
 
+    LaunchedEffect(state) {
+        if (state is JoinState.Success) onConfirmed()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -42,41 +44,23 @@ fun CommunityFoundScreen(
             modifier = Modifier.size(100.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Default.People,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(48.dp)
-                )
+                Icon(Icons.Default.People, null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
             }
         }
 
         Spacer(Modifier.height(24.dp))
-
-        Text(
-            text = "נמצאה קהילה!",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = communityName,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center
-        )
+        Text("נמצאה קהילה!", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(communityName, fontSize = 28.sp, fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center)
 
         Spacer(Modifier.height(32.dp))
 
-        // What will change
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "הצטרפות לקהילה זו תאפשר:",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("הצטרפות לקהילה זו תאפשר:",
+                    fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))
                 PolicyItem(Icons.Default.Shield, "ניהול המכשיר ע\"י מנהל הקהילה")
                 PolicyItem(Icons.Default.Lock, "הגבלת תוכן לפי הגדרות הקהילה")
@@ -85,19 +69,20 @@ fun CommunityFoundScreen(
 
         Spacer(Modifier.height(40.dp))
 
+        if (state is JoinState.Error) {
+            Text((state as JoinState.Error).message,
+                color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
+            Spacer(Modifier.height(8.dp))
+        }
+
         Button(
-            onClick = { vm.joinCommunity(code); vm.state.value.let { if (it is JoinState.Success) onConfirmed() } },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
+            onClick = { vm.joinCommunity(code) },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
             enabled = state !is JoinState.Loading
         ) {
             if (state is JoinState.Loading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    strokeWidth = 2.dp
-                )
+                CircularProgressIndicator(modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
             } else {
                 Text("אני מסכים — הצטרף", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -112,24 +97,12 @@ fun CommunityFoundScreen(
         ) {
             Text("ביטול", fontSize = 16.sp)
         }
-
-        if (state is JoinState.Error) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = (state as JoinState.Error).message,
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 14.sp
-            )
-        }
     }
 }
 
 @Composable
 private fun PolicyItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 4.dp)
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
         Icon(icon, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.width(8.dp))
         Text(text, fontSize = 14.sp)
