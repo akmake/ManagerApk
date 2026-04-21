@@ -20,8 +20,8 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 
-private const val APK_URL = "https://dahanswebsite.com/tether/tether-latest.apk"
-private const val APK_CHECKSUM = "REPLACE_WITH_YOUR_CHECKSUM"
+private const val APK_URL = "https://dahanswebsite.com/api/tether/app/download"
+private const val APK_CHECKSUM = "xycL3kb4-mXnqvRJV43SyQyqIgU1D4Nw9U1UWdJ8urs"
 private const val ADMIN_COMPONENT = "com.sterni.tether/.admin.TetherDeviceAdminReceiver"
 
 private fun buildProvisioningJson(): String = """
