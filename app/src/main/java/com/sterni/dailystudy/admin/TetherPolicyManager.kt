@@ -1,0 +1,147 @@
+package com.sterni.dailystudy.admin
+
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
+import android.os.UserManager
+import android.util.Log
+import com.google.gson.Gson
+import com.sterni.dailystudy.data.model.BlockedActionBehavior
+import com.sterni.dailystudy.data.model.CommunityPolicy
+
+object TetherPolicyManager {
+
+    private const val TAG = "TetherPolicy"
+    private const val PREFS = "tether_policy"
+    private const val KEY_POLICY = "current_policy"
+    private const val KEY_DEVICE_ID = "device_id"
+    private const val KEY_COMMUNITY_ID = "community_id"
+    private const val KEY_COMMUNITY_NAME = "community_name"
+
+    private val gson = Gson()
+
+    fun isDeviceOwner(context: Context): Boolean {
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val component = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+        return dpm.isDeviceOwnerApp(context.packageName) ||
+               dpm.isAdminActive(component)
+    }
+
+    fun applyPolicy(context: Context, policy: CommunityPolicy) {
+        savePolicy(context, policy)
+        applyStoredPolicy(context)
+    }
+
+    fun applyStoredPolicy(context: Context) {
+        val policy = loadPolicy(context) ?: return
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+
+        if (!dpm.isDeviceOwnerApp(context.packageName)) {
+            Log.w(TAG, "Not device owner — policy enforcement limited")
+            return
+        }
+
+        try {
+            applyInstallRestriction(dpm, context, policy.blockInstallApps)
+            applySafeBootRestriction(dpm, context, policy.blockSafeBoot)
+            applyFactoryResetRestriction(dpm, context, policy.blockFactoryReset)
+            applyUsbRestriction(dpm, context, policy.blockUsbTransfer)
+            applyHiddenApps(dpm, context, policy.hideGooglePlay, policy.blockedApps)
+            Log.i(TAG, "Policy applied successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply policy: ${e.message}")
+        }
+    }
+
+    private fun applyInstallRestriction(dpm: DevicePolicyManager, context: Context, block: Boolean) {
+        val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+        if (block) {
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_INSTALL_APPS)
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
+        } else {
+            dpm.clearUserRestriction(admin, UserManager.DISALLOW_INSTALL_APPS)
+            dpm.clearUserRestriction(admin, UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
+        }
+    }
+
+    private fun applySafeBootRestriction(dpm: DevicePolicyManager, context: Context, block: Boolean) {
+        val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+        if (block) dpm.addUserRestriction(admin, UserManager.DISALLOW_SAFE_BOOT)
+        else dpm.clearUserRestriction(admin, UserManager.DISALLOW_SAFE_BOOT)
+    }
+
+    private fun applyFactoryResetRestriction(dpm: DevicePolicyManager, context: Context, block: Boolean) {
+        val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+        if (block) dpm.addUserRestriction(admin, UserManager.DISALLOW_FACTORY_RESET)
+        else dpm.clearUserRestriction(admin, UserManager.DISALLOW_FACTORY_RESET)
+    }
+
+    private fun applyUsbRestriction(dpm: DevicePolicyManager, context: Context, block: Boolean) {
+        val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+        if (block) dpm.addUserRestriction(admin, UserManager.DISALLOW_USB_FILE_TRANSFER)
+        else dpm.clearUserRestriction(admin, UserManager.DISALLOW_USB_FILE_TRANSFER)
+    }
+
+    private fun applyHiddenApps(
+        dpm: DevicePolicyManager,
+        context: Context,
+        hideGooglePlay: Boolean,
+        additionalBlockedApps: List<String>
+    ) {
+        val appsToHide = mutableListOf<String>()
+        if (hideGooglePlay) appsToHide.add("com.android.vending")
+        appsToHide.addAll(additionalBlockedApps)
+
+        appsToHide.forEach { pkg ->
+            try {
+                dpm.setApplicationHidden(
+                    ComponentName(context, TetherDeviceAdminReceiver::class.java),
+                    pkg,
+                    true
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not hide $pkg: ${e.message}")
+            }
+        }
+    }
+
+    fun savePolicy(context: Context, policy: CommunityPolicy) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_POLICY, gson.toJson(policy))
+            .apply()
+    }
+
+    fun loadPolicy(context: Context): CommunityPolicy? {
+        val json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_POLICY, null) ?: return null
+        return try {
+            gson.fromJson(json, CommunityPolicy::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun saveEnrollment(context: Context, deviceId: String, communityId: String, communityName: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_DEVICE_ID, deviceId)
+            .putString(KEY_COMMUNITY_ID, communityId)
+            .putString(KEY_COMMUNITY_NAME, communityName)
+            .apply()
+    }
+
+    fun getDeviceId(context: Context): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_DEVICE_ID, null)
+
+    fun getCommunityId(context: Context): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_COMMUNITY_ID, null)
+
+    fun getCommunityName(context: Context): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_COMMUNITY_NAME, null)
+
+    fun isEnrolled(context: Context): Boolean = getDeviceId(context) != null
+
+    fun clearEnrollment(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+    }
+}

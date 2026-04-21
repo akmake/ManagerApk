@@ -78,16 +78,18 @@ dependencies {
     // WorkManager
     implementation(libs.work.runtime.ktx)
 
-    // Google Maps + Location
-    implementation(libs.play.services.location)
-    implementation(libs.play.services.maps)
-    implementation(libs.maps.compose)
+    // CameraX + ML Kit (QR scanning)
+    implementation(libs.camera.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
+    implementation(libs.mlkit.barcode)
 
-    // KosherJava (Hebrew calendar + zmanim)
-    implementation(libs.kosherjava)
+    // ZXing (QR generation)
+    implementation(libs.zxing.core)
 
-    // PDFBox Android (PDF text extraction)
-    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+    // Accompanist permissions
+    implementation(libs.accompanist.permissions)
 
     // Coil (image loading for Compose)
     implementation("io.coil-kt:coil-compose:2.6.0")

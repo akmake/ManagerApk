@@ -24,69 +24,76 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.view.WindowCompat
 import com.sterni.dailystudy.R
 
-val SblHebrew    = FontFamily(Font(R.font.sbl_hbrw))
-val BaHaYetzira  = FontFamily(Font(R.font.ba_hayetzira_regular))
+val HebrewFont = FontFamily(Font(R.font.sbl_hbrw))
 
-// Kept for backward compatibility with older screens
-val Primary      = Color(0xFF0F766E)
-val PrimaryLight = Color(0xFF14B8A6)
-val Ink          = Color(0xFF27272A)
-val Muted        = Color(0xFF71717A)
-val BgColor      = Color(0xFFFDFBF7)
-val CardBg       = Color(0xFFFFFFFF)
-val LineColor    = Color(0xFFE4E4E7)
-val Amber        = Color(0xFFF59E0B)
-
-val AppTypography = Typography(
-    displayLarge  = TextStyle(fontFamily = SblHebrew),
-    displayMedium = TextStyle(fontFamily = SblHebrew),
-    displaySmall  = TextStyle(fontFamily = SblHebrew),
-    headlineLarge = TextStyle(fontFamily = SblHebrew),
-    headlineMedium= TextStyle(fontFamily = SblHebrew),
-    headlineSmall = TextStyle(fontFamily = SblHebrew),
-    titleLarge    = TextStyle(fontFamily = SblHebrew),
-    titleMedium   = TextStyle(fontFamily = SblHebrew),
-    titleSmall    = TextStyle(fontFamily = SblHebrew),
-    bodyLarge     = TextStyle(fontFamily = SblHebrew),
-    bodyMedium    = TextStyle(fontFamily = SblHebrew),
-    bodySmall     = TextStyle(fontFamily = SblHebrew),
-    labelLarge    = TextStyle(fontFamily = SblHebrew),
-    labelMedium   = TextStyle(fontFamily = SblHebrew),
-    labelSmall    = TextStyle(fontFamily = SblHebrew)
-)
+// Tether color palette
+val TetherBlue        = Color(0xFF1A237E)
+val TetherBlueMid     = Color(0xFF283593)
+val TetherBlueLight   = Color(0xFF3F51B5)
+val TetherGreen       = Color(0xFF2E7D32)
+val TetherGreenLight  = Color(0xFF43A047)
+val TetherOrange      = Color(0xFFE65100)
+val TetherRed         = Color(0xFFB71C1C)
+val TetherBg          = Color(0xFFF5F5F5)
+val TetherSurface     = Color(0xFFFFFFFF)
+val TetherInk         = Color(0xFF212121)
+val TetherMuted       = Color(0xFF757575)
+val TetherLine        = Color(0xFFE0E0E0)
 
 private val LightColorScheme = lightColorScheme(
-    primary = Primary,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFF99F6E4),
-    onPrimaryContainer = Color(0xFF042F2E),
-    secondary = PrimaryLight,
-    onSecondary = Color.White,
-    background = BgColor,
-    onBackground = Ink,
-    surface = CardBg,
-    onSurface = Ink,
-    surfaceVariant = Color(0xFFF4F4F5),
-    onSurfaceVariant = Muted,
-    outline = LineColor,
-    error = Color(0xFFEF4444)
+    primary             = TetherBlue,
+    onPrimary           = Color.White,
+    primaryContainer    = Color(0xFFE8EAF6),
+    onPrimaryContainer  = TetherBlue,
+    secondary           = TetherGreen,
+    onSecondary         = Color.White,
+    secondaryContainer  = Color(0xFFE8F5E9),
+    onSecondaryContainer= TetherGreen,
+    background          = TetherBg,
+    onBackground        = TetherInk,
+    surface             = TetherSurface,
+    onSurface           = TetherInk,
+    surfaceVariant      = Color(0xFFF5F5F5),
+    onSurfaceVariant    = TetherMuted,
+    outline             = TetherLine,
+    error               = TetherRed,
+    onError             = Color.White
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF14B8A6),
-    onPrimary = Color(0xFF042F2E),
-    primaryContainer = Color(0xFF0F766E),
-    onPrimaryContainer = Color(0xFF99F6E4),
-    secondary = Color(0xFF2DD4BF),
-    onSecondary = Color(0xFF042F2E),
-    background = Color(0xFF18181B),
-    onBackground = Color(0xFFF4F4F5),
-    surface = Color(0xFF27272A),
-    onSurface = Color(0xFFF4F4F5),
-    surfaceVariant = Color(0xFF3F3F46),
-    onSurfaceVariant = Color(0xFFA1A1AA),
-    outline = Color(0xFF52525B),
-    error = Color(0xFFF87171)
+    primary             = Color(0xFF7986CB),
+    onPrimary           = Color(0xFF1A237E),
+    primaryContainer    = Color(0xFF283593),
+    onPrimaryContainer  = Color(0xFFE8EAF6),
+    secondary           = Color(0xFF66BB6A),
+    onSecondary         = Color(0xFF1B5E20),
+    background          = Color(0xFF121212),
+    onBackground        = Color(0xFFE0E0E0),
+    surface             = Color(0xFF1E1E1E),
+    onSurface           = Color(0xFFE0E0E0),
+    surfaceVariant      = Color(0xFF2C2C2C),
+    onSurfaceVariant    = Color(0xFFBDBDBD),
+    outline             = Color(0xFF424242),
+    error               = Color(0xFFEF9A9A),
+    onError             = Color(0xFF7F0000)
+)
+
+val AppTypography = Typography(
+    displayLarge   = TextStyle(fontFamily = HebrewFont),
+    displayMedium  = TextStyle(fontFamily = HebrewFont),
+    displaySmall   = TextStyle(fontFamily = HebrewFont),
+    headlineLarge  = TextStyle(fontFamily = HebrewFont),
+    headlineMedium = TextStyle(fontFamily = HebrewFont),
+    headlineSmall  = TextStyle(fontFamily = HebrewFont),
+    titleLarge     = TextStyle(fontFamily = HebrewFont),
+    titleMedium    = TextStyle(fontFamily = HebrewFont),
+    titleSmall     = TextStyle(fontFamily = HebrewFont),
+    bodyLarge      = TextStyle(fontFamily = HebrewFont),
+    bodyMedium     = TextStyle(fontFamily = HebrewFont),
+    bodySmall      = TextStyle(fontFamily = HebrewFont),
+    labelLarge     = TextStyle(fontFamily = HebrewFont),
+    labelMedium    = TextStyle(fontFamily = HebrewFont),
+    labelSmall     = TextStyle(fontFamily = HebrewFont)
 )
 
 @Composable
