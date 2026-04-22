@@ -10,10 +10,10 @@ class TetherAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "TetherA11y"
-        private const val OUR_PACKAGE = "com.sterni.tether"
+        private const val OUR_PACKAGE = "com.sterni.tether" // ודא שזה הפאקג' הנכון שלך
         private const val OUR_APP_NAME = "Tether"
 
-        private val WATCHED_PACKAGES = setOf(
+        private val WATCHED_PACKAGES = arrayOf(
             "com.android.settings",
             "com.google.android.packageinstaller",
             "com.miui.packageinstaller",
@@ -24,12 +24,13 @@ class TetherAccessibilityService : AccessibilityService() {
             "com.android.packageinstaller"
         )
 
-        // Uninstall / force-stop button texts in Hebrew and English
         private val UNINSTALL_KEYWORDS = listOf(
             "הסר התקנה", "uninstall", "UNINSTALL",
             "עצור בכפייה", "force stop", "FORCE STOP",
             "השבת", "disable", "DISABLE",
-            "OK", "אישור", "כן"   // confirmation dialogs
+            "כבה", "turn off", "TURN OFF",
+            "הפסק", "stop", "STOP",
+            "OK", "אישור", "כן"
         )
 
         @Volatile var isRunning = false
@@ -38,14 +39,18 @@ class TetherAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         isRunning = true
         Log.i(TAG, "Accessibility service connected")
-        serviceInfo = serviceInfo?.apply {
+        
+        val info = serviceInfo ?: AccessibilityServiceInfo()
+        info.apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                     AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags = AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             notificationTimeout = 100
-            packageNames = null // monitor ALL packages — more reliable
+            // תיקון קריטי: האזנה *רק* לאפליקציות ההתקנה וההגדרות
+            packageNames = WATCHED_PACKAGES
         }
+        serviceInfo = info
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -56,54 +61,40 @@ class TetherAccessibilityService : AccessibilityService() {
 
         val root = rootInActiveWindow ?: return
         try {
-            if (isAppInfoForOurApp(root) || isUninstallConfirmationForOurApp(root)) {
+            if (isUninstallAttemptFast(root)) {
                 Log.w(TAG, "Blocking uninstall attempt from $pkg")
                 performGlobalAction(GLOBAL_ACTION_BACK)
             }
         } catch (_: Exception) {
         } finally {
-            @Suppress("DEPRECATION")
             root.recycle()
         }
     }
 
-    // Detects the App Info screen: our app name is the title AND an uninstall/force-stop button is visible
-    private fun isAppInfoForOurApp(root: AccessibilityNodeInfo): Boolean {
-        val allText = collectAllText(root)
-
-        // Must contain our app name or package name somewhere on screen
-        val hasOurApp = allText.any {
-            it.equals(OUR_APP_NAME, ignoreCase = true) || it.contains(OUR_PACKAGE, ignoreCase = true)
+    // סריקה מהירה ויעילה ללא רקורסיה קטלנית
+    private fun isUninstallAttemptFast(root: AccessibilityNodeInfo): Boolean {
+        // שלב 1: האם יש כפתור מסוכן? (חיפוש מהיר של המערכת במקום סריקה ידנית)
+        val hasDangerousButton = UNINSTALL_KEYWORDS.any { keyword ->
+            val nodes = root.findAccessibilityNodeInfosByText(keyword)
+            val exists = nodes.any { it.isEnabled && it.isVisibleToUser && it.isClickable }
+            nodes.forEach { it.recycle() } // חובה לשחרר זיכרון
+            exists
         }
-        if (!hasOurApp) return false
 
-        // AND one of the dangerous buttons must be visible and enabled
-        return UNINSTALL_KEYWORDS.any { keyword ->
-            root.findAccessibilityNodeInfosByText(keyword).any { node ->
-                node.isEnabled && node.isVisibleToUser && node.isClickable
-            }
-        }
-    }
+        if (!hasDangerousButton) return false
 
-    // Detects the "Are you sure you want to uninstall?" confirmation dialog for our app
-    private fun isUninstallConfirmationForOurApp(root: AccessibilityNodeInfo): Boolean {
-        val allText = collectAllText(root)
-        val combined = allText.joinToString(" ").lowercase()
-        // The dialog mentions our package name OR our app name
-        return (OUR_PACKAGE in combined || OUR_APP_NAME.lowercase() in combined) &&
-                ("uninstall" in combined || "הסר" in combined || "מחק" in combined)
-    }
+        // שלב 2: אם יש כפתור מסוכן, האם זה קשור לאפליקציה שלנו?
+        val appNameNodes = root.findAccessibilityNodeInfosByText(OUR_APP_NAME)
+        val hasAppName = appNameNodes.isNotEmpty()
+        appNameNodes.forEach { it.recycle() }
+        
+        if (hasAppName) return true
 
-    private fun collectAllText(node: AccessibilityNodeInfo): List<String> {
-        val result = mutableListOf<String>()
-        fun traverse(n: AccessibilityNodeInfo?) {
-            n ?: return
-            n.text?.toString()?.takeIf { it.isNotBlank() }?.let { result.add(it) }
-            n.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { result.add(it) }
-            for (i in 0 until n.childCount) traverse(n.getChild(i))
-        }
-        traverse(node)
-        return result
+        val pkgNodes = root.findAccessibilityNodeInfosByText(OUR_PACKAGE)
+        val hasPkgName = pkgNodes.isNotEmpty()
+        pkgNodes.forEach { it.recycle() }
+
+        return hasPkgName
     }
 
     override fun onInterrupt() {}

@@ -47,6 +47,10 @@ class JoinCommunityViewModel(app: Application) : AndroidViewModel(app) {
 
     fun joinCommunity(code: String) {
         val context = getApplication<Application>()
+        if (!TetherPolicyManager.isDeviceOwner(context)) {
+            _state.value = JoinState.Error("שגיאת הרשאות: האפליקציה לא הוגדרה כמנהלית (Device Owner). עליך להריץ את פקודת ה-ADB.")
+            return
+        }
         val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
         val deviceModel = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
 

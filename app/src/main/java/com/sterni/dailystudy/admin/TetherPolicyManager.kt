@@ -26,9 +26,7 @@ object TetherPolicyManager {
 
     fun isDeviceOwner(context: Context): Boolean {
         val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        val component = ComponentName(context, TetherDeviceAdminReceiver::class.java)
-        return dpm.isDeviceOwnerApp(context.packageName) ||
-               dpm.isAdminActive(component)
+        return dpm.isDeviceOwnerApp(context.packageName)
     }
 
     fun applyPolicy(context: Context, policy: CommunityPolicy) {
@@ -59,9 +57,10 @@ object TetherPolicyManager {
 
             Log.i(TAG, "Policy applied successfully")
         } catch (e: SecurityException) {
-            Log.w(TAG, "Some restrictions require Device Owner: ${e.message}")
+            Log.e(TAG, "CRITICAL ERROR: This app is NOT a Device Owner. Policy cannot be enforced.", e)
+            // DO NOT THROW HERE! Throwing here causes MainActivity to crash instantly on startup.
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to apply policy: ${e.message}")
+            Log.e(TAG, "Failed to apply policy: ${e.message}", e)
         }
     }
 
@@ -100,19 +99,37 @@ object TetherPolicyManager {
         hideGooglePlay: Boolean,
         additionalBlockedApps: List<String>
     ) {
-        val appsToHide = mutableListOf<String>()
-        if (hideGooglePlay) appsToHide.add("com.android.vending")
-        appsToHide.addAll(additionalBlockedApps)
+        val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+        
+        // List of common store and installer packages to block if hideGooglePlay is true
+        val criticalPackages = listOf(
+            "com.android.vending",                    // Google Play Store
+            "com.sec.android.app.samsungapps",        // Samsung Galaxy Store
+            "com.android.packageinstaller",           // System Package Installer
+            "com.google.android.packageinstaller",    // Google Package Installer
+            "com.amazon.venezia",                     // Amazon Appstore
+            "com.huawei.appmarket",                   // Huawei AppGallery
+            "com.oppo.market",                        // Oppo App Market
+            "com.vivo.appstore"                       // Vivo App Store
+        )
 
-        appsToHide.forEach { pkg ->
+        criticalPackages.forEach { pkg ->
             try {
-                dpm.setApplicationHidden(
-                    ComponentName(context, TetherDeviceAdminReceiver::class.java),
-                    pkg,
-                    true
-                )
+                // If hideGooglePlay is true, we hide all these installers/stores
+                dpm.setApplicationHidden(admin, pkg, hideGooglePlay)
+                Log.i(TAG, "Setting $pkg hidden=$hideGooglePlay")
             } catch (e: Exception) {
-                Log.w(TAG, "Could not hide $pkg: ${e.message}")
+                // Not all devices have all these stores, so we log as warning
+                Log.w(TAG, "Could not set hidden state for $pkg: ${e.message}")
+            }
+        }
+
+        // Additional apps defined in the policy
+        additionalBlockedApps.forEach { pkg ->
+            try {
+                dpm.setApplicationHidden(admin, pkg, true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to hide additional app $pkg", e)
             }
         }
     }

@@ -19,6 +19,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Force apply policy on startup
+        com.sterni.dailystudy.admin.TetherPolicyManager.applyStoredPolicy(this)
+
         PolicySyncWorker.enqueue(this)
         CalendarReminderWorker.enqueuePeriodic(this)
 

@@ -40,7 +40,7 @@
 
         <!-- Device Admin Receiver — core of Tether Device Owner -->
         <receiver
-            android:name=".admin.TetherDeviceAdminReceiver"
+            android:name="com.sterni.dailystudy.admin.TetherDeviceAdminReceiver"
             android:exported="true"
             android:permission="android.permission.BIND_DEVICE_ADMIN">
             <meta-data

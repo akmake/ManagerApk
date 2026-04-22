@@ -9,6 +9,8 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.sterni.dailystudy.data.model.WebFilterMode
+import com.sterni.dailystudy.data.model.CommunityPolicy
+import kotlinx.coroutines.*
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramPacket
@@ -30,7 +32,20 @@ class TetherVpnService : VpnService() {
     }
 
     private var vpnInterface: ParcelFileDescriptor? = null
-    private var running = false
+    private var vpnOutput: FileOutputStream? = null
+    @Volatile private var running = false
+
+    // ניהול תהליכי רקע מודרני (Coroutines)
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
+
+    // מנגנון סנכרון לכתיבה חזרה ל-VPN Interface
+    private val writeLock = Any()
+
+    // מטמון (Cache) כדי לא לקרוא מהדיסק על כל פאקט רשת
+    private var cachedPolicy: CommunityPolicy? = null // שנה ל-Type המתאים אצלך
+    private var lastPolicySyncTime = 0L
+    private val POLICY_CACHE_DURATION_MS = 60_000L // עדכון מהדיסק רק פעם בדקה
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "STOP") {
@@ -60,15 +75,18 @@ class TetherVpnService : VpnService() {
             return
         }
 
+        vpnOutput = FileOutputStream(vpnInterface!!.fileDescriptor)
         isRunning = true
         running = true
 
-        Thread { runVpnLoop() }.start()
+        // מתחיל את לולאת הקריאה בקורוטינה נפרדת
+        serviceScope.launch(Dispatchers.IO) {
+            runVpnLoop()
+        }
     }
 
-    private fun runVpnLoop() {
+    private suspend fun runVpnLoop() {
         val input = FileInputStream(vpnInterface!!.fileDescriptor)
-        val output = FileOutputStream(vpnInterface!!.fileDescriptor)
         val packet = ByteBuffer.allocate(32767)
 
         while (running) {
@@ -76,70 +94,124 @@ class TetherVpnService : VpnService() {
                 packet.clear()
                 val length = input.read(packet.array())
                 if (length <= 0) continue
-                packet.limit(length)
 
-                // Parse IP header to find UDP port 53 (DNS)
-                if (length < 20) continue
-                val protocol = packet.get(9).toInt() and 0xFF
-                if (protocol != 17) { // 17 = UDP
-                    // Forward non-UDP packets as-is
-                    output.write(packet.array(), 0, length)
-                    continue
+                // אנחנו חייבים עותק של הפאקט כי אנחנו משחררים אותו ל-Thread אחר
+                val packetCopy = packet.array().copyOf(length)
+
+                // מעבדים את הפאקט בצורה אסינכרונית (כדי לא לעצור את שאר התעבורה)
+                serviceScope.launch {
+                    processPacket(packetCopy, length)
                 }
 
-                val ipHeaderLen = (packet.get(0).toInt() and 0x0F) * 4
-                if (length < ipHeaderLen + 8) continue
-
-                val dstPort = ((packet.get(ipHeaderLen + 2).toInt() and 0xFF) shl 8) or
-                        (packet.get(ipHeaderLen + 3).toInt() and 0xFF)
-
-                if (dstPort != 53) {
-                    output.write(packet.array(), 0, length)
-                    continue
-                }
-
-                // Extract DNS payload
-                val dnsOffset = ipHeaderLen + 8
-                val dnsLength = length - dnsOffset
-                if (dnsLength < 12) continue
-
-                val dnsData = packet.array().copyOfRange(dnsOffset, dnsOffset + dnsLength)
-                val domain = parseDnsDomain(dnsData)
-                if (domain == null) {
-                    output.write(packet.array(), 0, length)
-                    continue
-                }
-
-                val policy = TetherPolicyManager.loadPolicy(this)
-                val blocked = when (policy?.webFilterMode) {
-                    WebFilterMode.BLACKLIST -> isDomainBlocked(domain, policy.blockedDomains)
-                    WebFilterMode.WHITELIST -> !isDomainAllowed(domain, policy.allowedDomains)
-                    else -> false
-                }
-
-                if (blocked) {
-                    Log.i(TAG, "Blocked domain: $domain")
-                    broadcastBlocked(domain)
-                    val nxdomain = buildNxDomainResponse(dnsData)
-                    val response = buildIpUdpResponse(packet.array(), ipHeaderLen, nxdomain)
-                    output.write(response)
-                } else {
-                    val response = forwardDns(dnsData)
-                    if (response == null) continue
-                    val ipResponse = buildIpUdpResponse(packet.array(), ipHeaderLen, response)
-                    output.write(ipResponse)
-                }
             } catch (e: Exception) {
                 if (running) Log.e(TAG, "VPN loop error: ${e.message}")
             }
         }
     }
 
-    // ── DNS domain name parser ────────────────────────────────────────────────
+    private suspend fun processPacket(packetData: ByteArray, length: Int) {
+        if (length < 20) return
+        val protocol = packetData[9].toInt() and 0xFF
+        if (protocol != 17) { // 17 = UDP
+            // חבילות לא-UDP - פשוט נחזיר כמו שהן (לפי הלוגיקה המקורית שלך)
+            writeToVpn(packetData, length)
+            return
+        }
+
+        val ipHeaderLen = (packetData[0].toInt() and 0x0F) * 4
+        if (length < ipHeaderLen + 8) return
+
+        val dstPort = ((packetData[ipHeaderLen + 2].toInt() and 0xFF) shl 8) or
+                (packetData[ipHeaderLen + 3].toInt() and 0xFF)
+
+        if (dstPort != 53) {
+            writeToVpn(packetData, length)
+            return
+        }
+
+        // חילוץ DNS
+        val dnsOffset = ipHeaderLen + 8
+        val dnsLength = length - dnsOffset
+        if (dnsLength < 12) return
+
+        val dnsData = packetData.copyOfRange(dnsOffset, dnsOffset + dnsLength)
+        val domain = parseDnsDomain(dnsData)
+        if (domain == null) {
+            writeToVpn(packetData, length)
+            return
+        }
+
+        // טעינת פוליסה מתוך מטמון יעיל (ללא I/O מיותר)
+        val policy = getActivePolicy()
+        val blocked = when (policy?.webFilterMode) {
+            WebFilterMode.BLACKLIST -> isDomainBlocked(domain, policy.blockedDomains ?: emptyList())
+            WebFilterMode.WHITELIST -> !isDomainAllowed(domain, policy.allowedDomains ?: emptyList())
+            else -> false
+        }
+
+        if (blocked) {
+            Log.i(TAG, "Blocked domain: $domain")
+            broadcastBlocked(domain)
+            val nxdomain = buildNxDomainResponse(dnsData)
+            val response = buildIpUdpResponse(packetData, ipHeaderLen, nxdomain)
+            writeToVpn(response, response.size)
+        } else {
+            // Forwarding אסינכרוני שלא תוקע את האפליקציה!
+            val response = forwardDnsAsync(dnsData)
+            if (response != null) {
+                val ipResponse = buildIpUdpResponse(packetData, ipHeaderLen, response)
+                writeToVpn(ipResponse, ipResponse.size)
+            }
+        }
+    }
+
+    // ── ניהול מטמון (Cache) למדיניות ──────────────────────────────────────────
+
+    private fun getActivePolicy(): CommunityPolicy? { // שנה Type אם קוראים לו אחרת
+        val now = System.currentTimeMillis()
+        if (cachedPolicy == null || (now - lastPolicySyncTime > POLICY_CACHE_DURATION_MS)) {
+            cachedPolicy = TetherPolicyManager.loadPolicy(this)
+            lastPolicySyncTime = now
+        }
+        return cachedPolicy
+    }
+
+    // ── פעולת רשת אסינכרונית ──────────────────────────────────────────────────
+
+    private suspend fun forwardDnsAsync(query: ByteArray): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            DatagramSocket().use { socket ->
+                protect(socket)
+                val upstream = InetAddress.getByName("8.8.8.8")
+                socket.send(DatagramPacket(query, query.size, upstream, 53))
+                socket.soTimeout = 3000
+                val buf = ByteArray(512)
+                val resp = DatagramPacket(buf, buf.size)
+                socket.receive(resp)
+                buf.copyOf(resp.length)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // ── כתיבה בטוחה (Thread-Safe) לממשק ה-VPN ─────────────────────────────────
+
+    private fun writeToVpn(data: ByteArray, length: Int) {
+        if (!running) return
+        synchronized(writeLock) {
+            try {
+                vpnOutput?.write(data, 0, length)
+            } catch (e: Exception) {
+                if (running) Log.e(TAG, "Failed to write to VPN: ${e.message}")
+            }
+        }
+    }
+
+    // ── פונקציות העזר נשארו כמעט זהות, רק הוסדר ה-Type ────────────────────────
 
     private fun parseDnsDomain(dns: ByteArray): String? {
         return try {
-            // DNS header is 12 bytes, questions start at offset 12
             val sb = StringBuilder()
             var i = 12
             while (i < dns.size) {
@@ -162,77 +234,47 @@ class TetherVpnService : VpnService() {
     }
 
     private fun isDomainAllowed(domain: String, allowedDomains: List<String>): Boolean {
-        // Always allow our own server
         if (domain.contains("dahanswebsite.com")) return true
         return allowedDomains.any { allowed ->
             domain == allowed || domain.endsWith(".$allowed")
         }
     }
 
-    // ── DNS NXDOMAIN response builder ─────────────────────────────────────────
-
     private fun buildNxDomainResponse(query: ByteArray): ByteArray {
         val response = query.copyOf()
-        // Set QR=1 (response), AA=0, TC=0, RA=1, RCODE=3 (NXDOMAIN)
-        response[2] = (0x81).toByte() // QR=1, Opcode=0, AA=0, TC=0, RD=1
-        response[3] = (0x83).toByte() // RA=1, RCODE=3 (NXDOMAIN)
-        // ANCOUNT, NSCOUNT, ARCOUNT = 0
+        response[2] = (0x81).toByte()
+        response[3] = (0x83).toByte()
         response[6] = 0; response[7] = 0
         response[8] = 0; response[9] = 0
         response[10] = 0; response[11] = 0
         return response
     }
 
-    // ── Forward DNS to upstream ───────────────────────────────────────────────
-
-    private fun forwardDns(query: ByteArray): ByteArray? {
-        return try {
-            val socket = DatagramSocket()
-            protect(socket)
-            val upstream = InetAddress.getByName("8.8.8.8")
-            socket.send(DatagramPacket(query, query.size, upstream, 53))
-            socket.soTimeout = 3000
-            val buf = ByteArray(512)
-            val resp = DatagramPacket(buf, buf.size)
-            socket.receive(resp)
-            socket.close()
-            buf.copyOf(resp.length)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    // ── IP/UDP packet builder ─────────────────────────────────────────────────
-
     private fun buildIpUdpResponse(originalIp: ByteArray, ipHeaderLen: Int, dnsPayload: ByteArray): ByteArray {
         val totalLen = ipHeaderLen + 8 + dnsPayload.size
         val pkt = ByteArray(totalLen)
 
-        // Copy and swap src/dst IP
         System.arraycopy(originalIp, 0, pkt, 0, ipHeaderLen)
-        // Swap source and destination IP
-        System.arraycopy(originalIp, 12, pkt, 16, 4) // original dst → new src
-        System.arraycopy(originalIp, 16, pkt, 12, 4) // original src → new dst
-        // Total length
+        System.arraycopy(originalIp, 12, pkt, 16, 4) 
+        System.arraycopy(originalIp, 16, pkt, 12, 4) 
+        
         pkt[2] = (totalLen shr 8).toByte()
         pkt[3] = (totalLen and 0xFF).toByte()
-        // TTL
         pkt[8] = 64
 
-        // UDP header: swap ports
         pkt[ipHeaderLen] = originalIp[ipHeaderLen + 2]
         pkt[ipHeaderLen + 1] = originalIp[ipHeaderLen + 3]
         pkt[ipHeaderLen + 2] = originalIp[ipHeaderLen]
         pkt[ipHeaderLen + 3] = originalIp[ipHeaderLen + 1]
+        
         val udpLen = 8 + dnsPayload.size
         pkt[ipHeaderLen + 4] = (udpLen shr 8).toByte()
         pkt[ipHeaderLen + 5] = (udpLen and 0xFF).toByte()
-        pkt[ipHeaderLen + 6] = 0 // checksum (skip)
+        pkt[ipHeaderLen + 6] = 0 
         pkt[ipHeaderLen + 7] = 0
 
         System.arraycopy(dnsPayload, 0, pkt, ipHeaderLen + 8, dnsPayload.size)
 
-        // Recalculate IP checksum
         pkt[10] = 0; pkt[11] = 0
         val checksum = ipChecksum(pkt, ipHeaderLen)
         pkt[10] = (checksum shr 8).toByte()
@@ -252,8 +294,6 @@ class TetherVpnService : VpnService() {
         return sum.inv() and 0xFFFF
     }
 
-    // ── Broadcast & notification ──────────────────────────────────────────────
-
     private fun broadcastBlocked(domain: String) {
         val intent = Intent(ACTION_DOMAIN_BLOCKED).putExtra(EXTRA_DOMAIN, domain)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
@@ -262,6 +302,8 @@ class TetherVpnService : VpnService() {
     private fun stopVpn() {
         running = false
         isRunning = false
+        serviceJob.cancelChildren() // עצירת כל תהליכי הרקע הפעילים
+        vpnOutput?.close()
         vpnInterface?.close()
         vpnInterface = null
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -270,6 +312,11 @@ class TetherVpnService : VpnService() {
 
     override fun onRevoke() {
         stopVpn()
+    }
+
+    override fun onDestroy() {
+        serviceJob.cancel()
+        super.onDestroy()
     }
 
     private fun createNotificationChannel() {
