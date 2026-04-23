@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' reboot)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' wait-for-device)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell ls -la /data/system/users/0/accounts.db)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell which sqlite3)",
+      "PowerShell(& \"C:\\\\Users\\\\yosef dahan\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" devices)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\yosef dahan\\Documents\\GitHub\\sterni\\client\\src\\pages"
+    ]
+  }
+}

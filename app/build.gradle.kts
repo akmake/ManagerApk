@@ -14,7 +14,7 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.sterni.dailystudy"
+    namespace = "com.sterni.tether"
     compileSdk = 34
 
     defaultConfig {

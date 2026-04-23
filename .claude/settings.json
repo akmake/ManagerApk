@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' devices)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' install -r 'c:/Users/yosef dahan/Documents/GitHub/ManagerApk/app/build/outputs/apk/debug/app-debug.apk')",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell dpm set-device-owner com.sterni.dailystudy/.admin.TetherDeviceAdminReceiver)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell dpm list-owners)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell dumpsys account)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' uninstall com.sterni.dailystudy)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' install 'c:/Users/yosef dahan/Documents/GitHub/ManagerApk/app/build/outputs/apk/debug/app-debug.apk')",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell am broadcast -a android.accounts.LOGIN_ACCOUNTS_CHANGED_ACTION)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell dpm set-device-owner --force-nontest-mode com.sterni.dailystudy/.admin.TetherDeviceAdminReceiver)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell am start -a android.settings.SYNC_SETTINGS)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell settings get global device_provisioned)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell settings put global device_provisioned 0)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell settings put global device_provisioned 1)",
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell pm list packages)"
+    ]
+  }
+}

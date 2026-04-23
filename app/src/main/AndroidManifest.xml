@@ -15,23 +15,22 @@
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN"
         tools:ignore="ProtectedPermissions"
         xmlns:tools="http://schemas.android.com/tools" />
-
     <application
-        android:name=".DailyStudyApp"
+        android:name=".TetherApp"
         android:allowBackup="false"
         android:icon="@drawable/app_logo"
         android:label="@string/app_name"
         android:roundIcon="@drawable/app_logo"
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true"
-        android:theme="@style/Theme.DailyStudy"
+        android:theme="@style/Theme.Tether"
         android:usesCleartextTraffic="false">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.DailyStudy">
+            android:theme="@style/Theme.Tether">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -40,7 +39,7 @@
 
         <!-- Device Admin Receiver — core of Tether Device Owner -->
         <receiver
-            android:name="com.sterni.dailystudy.admin.TetherDeviceAdminReceiver"
+            android:name="com.sterni.tether.admin.TetherDeviceAdminReceiver"
             android:exported="true"
             android:permission="android.permission.BIND_DEVICE_ADMIN">
             <meta-data
@@ -57,12 +56,13 @@
             android:name=".notification.CalendarReminderReceiver"
             android:exported="true" />
 
-        <!-- Boot receiver — reapplies policies after device reboot -->
+        <!-- Boot receiver — reapplies policies and restarts protection services after reboot -->
         <receiver
             android:name=".admin.BootPolicyReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 
@@ -83,7 +83,23 @@
             android:exported="false"
             android:foregroundServiceType="specialUse" />
 
-        <!-- Accessibility Service — prevents unauthorized uninstall -->
+        <!-- Watchdog Service — monitors protection layers and sends heartbeat -->
+        <service
+            android:name=".admin.TetherWatchdogService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+
+        <!-- Notification Listener — cancels "Can't uninstall" notification before user taps it -->
+        <service
+            android:name=".admin.TetherNotificationListener"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Accessibility Service — prevents unauthorized uninstall / admin deactivation -->
         <service
             android:name=".admin.TetherAccessibilityService"
             android:exported="true"
