@@ -14,7 +14,10 @@
       "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell settings get global device_provisioned)",
       "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell settings put global device_provisioned 0)",
       "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell settings put global device_provisioned 1)",
-      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell pm list packages)"
+      "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell pm list packages)",
+      "Bash(./gradlew compileDebugKotlin)",
+      "PowerShell(cd \"c:\\\\Users\\\\yosef dahan\\\\Documents\\\\GitHub\\\\ManagerApk\"; $env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:PATH\"; .\\\\gradlew.bat compileDebugKotlin 2>&1 | Select-Object -Last 30)",
+      "PowerShell(cd \"c:\\\\Users\\\\yosef dahan\\\\Documents\\\\GitHub\\\\ManagerApk\"; $env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:PATH\"; .\\\\gradlew.bat assembleDebug 2>&1 | Select-Object -Last 20)"
     ]
   }
 }

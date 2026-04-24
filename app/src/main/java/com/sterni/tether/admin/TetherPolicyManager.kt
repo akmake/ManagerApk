@@ -224,20 +224,43 @@ object TetherPolicyManager {
 
         try {
             if (dpm.isDeviceOwnerApp(context.packageName)) {
-                // קודם ננקה את כל ההגבלות הקריטיות כדי שלא נשאיר את המכשיר נעול
-                dpm.clearUserRestriction(admin, UserManager.DISALLOW_INSTALL_APPS)
-                dpm.clearUserRestriction(admin, UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
-                dpm.clearUserRestriction(admin, UserManager.DISALLOW_SAFE_BOOT)
-                dpm.clearUserRestriction(admin, UserManager.DISALLOW_FACTORY_RESET)
-                dpm.clearUserRestriction(admin, UserManager.DISALLOW_USB_FILE_TRANSFER)
+                // מנקה את כל ההגבלות לפני הסרת Device Owner
+                listOf(
+                    UserManager.DISALLOW_INSTALL_APPS,
+                    UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
+                    UserManager.DISALLOW_SAFE_BOOT,
+                    UserManager.DISALLOW_FACTORY_RESET,
+                    UserManager.DISALLOW_USB_FILE_TRANSFER,
+                    UserManager.DISALLOW_ADD_USER,
+                    UserManager.DISALLOW_DEBUGGING_FEATURES,
+                    UserManager.DISALLOW_APPS_CONTROL,
+                    UserManager.DISALLOW_MODIFY_ACCOUNTS
+                ).forEach { restriction ->
+                    try { dpm.clearUserRestriction(admin, restriction) } catch (_: Exception) {}
+                }
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    try { dpm.clearUserRestriction(admin, UserManager.DISALLOW_SYSTEM_ERROR_DIALOGS) } catch (_: Exception) {}
+                }
                 dpm.setUninstallBlocked(admin, context.packageName, false)
-
-                // מסיר את סמכות ה-Device Owner
                 dpm.clearDeviceOwnerApp(context.packageName)
                 Log.i(TAG, "Device Owner privileges removed successfully")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to remove Device Owner: ${e.message}", e)
+        }
+    }
+
+    fun releaseAllAndUninstall(context: Context) {
+        removeDeviceOwner(context)
+        clearEnrollment(context)
+        try {
+            val intent = Intent(Intent.ACTION_DELETE).apply {
+                data = android.net.Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch uninstall: ${e.message}", e)
         }
     }
 
