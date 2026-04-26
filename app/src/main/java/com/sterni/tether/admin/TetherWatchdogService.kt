@@ -108,6 +108,14 @@ class TetherWatchdogService : Service() {
         val vpnNeeded = isVpnNeeded()
         val vpnOk = !vpnNeeded || TetherVpnService.isRunning
 
+        // Uninstall window expiry — works fully offline, checked every 30 s
+        val expiresAt = TetherPolicyManager.getUninstallExpiresAt(this)
+        if (expiresAt > 0L && System.currentTimeMillis() >= expiresAt) {
+            TetherPolicyManager.clearUninstallWindow(this)
+            TetherPolicyManager.applyStoredPolicy(this)
+            Log.i(TAG, "Uninstall window expired — protections restored")
+        }
+
         // Restart VPN if it died and is still needed
         if (vpnNeeded && !vpnOk) {
             try { startForegroundService(Intent(this, TetherVpnService::class.java)) } catch (_: Exception) {}
@@ -171,7 +179,7 @@ class TetherWatchdogService : Service() {
 
     private suspend fun syncPolicy() {
         if (!TetherPolicyManager.isEnrolled(this)) return
-        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: return
+        val deviceId = TetherPolicyManager.getDeviceId(this) ?: return
         try {
             val response = RetrofitClient.create(TetherApiService::class.java).getPolicy(deviceId)
             if (!response.isSuccessful) return
@@ -192,12 +200,11 @@ class TetherWatchdogService : Service() {
                 }
             }
 
-            val allowUninstall = body.allowUninstall
-            if (allowUninstall && !TetherPolicyManager.isUninstallAllowed(this)) {
-                TetherPolicyManager.saveAllowUninstall(this, true)
-                TetherPolicyManager.releaseAllAndUninstall(this)
-            } else {
-                TetherPolicyManager.saveAllowUninstall(this, allowUninstall)
+            // allowUninstall=true from server starts a 1-hour local window (works offline too)
+            if (body.allowUninstall && !TetherPolicyManager.isUninstallWindowActive(this)) {
+                TetherPolicyManager.startUninstallWindow(this)
+                TetherPolicyManager.applyPolicy(this, policy)
+                Log.i(TAG, "Uninstall window started — 1h from now")
             }
         } catch (e: Exception) {
             Log.w(TAG, "Fast sync failed: ${e.message}")
@@ -224,8 +231,7 @@ class TetherWatchdogService : Service() {
     // ── Heartbeat ────────────────────────────────────────────────────────────
 
     private fun sendHeartbeat(accessibilityOk: Boolean, adminOk: Boolean, vpnOk: Boolean) {
-        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-            ?: return
+        val deviceId = TetherPolicyManager.getDeviceId(this) ?: return
         serviceScope.launch {
             try {
                 RetrofitClient.create(TetherApiService::class.java)

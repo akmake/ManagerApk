@@ -54,6 +54,12 @@ interface AdminApiService {
         @Path("deviceId") deviceId: String
     ): Response<DeviceDetail>
 
+    @GET("tether/admin/devices/{deviceId}/events")
+    suspend fun getDeviceEvents(
+        @Header("Authorization") token: String,
+        @Path("deviceId") deviceId: String
+    ): Response<SecurityEventsResponse>
+
     @PUT("tether/admin/devices/{deviceId}/device-policy")
     suspend fun updateDevicePolicy(
         @Header("Authorization") token: String,
@@ -112,6 +118,26 @@ interface AdminApiService {
         @Header("Authorization") token: String,
         @Path("id") communityId: String
     ): Response<List<LogEntry>>
+
+    // Global overview (all devices + communities, no filters)
+    @GET("tether/admin/global/devices")
+    suspend fun getAllDevicesGlobal(@Header("Authorization") token: String): Response<List<com.sterni.tether.data.model.GlobalDevice>>
+
+    @GET("tether/admin/global/communities")
+    suspend fun getAllCommunitiesGlobal(@Header("Authorization") token: String): Response<List<com.sterni.tether.data.model.GlobalCommunity>>
+
+    @DELETE("tether/admin/global/devices/{id}")
+    suspend fun deleteDeviceGlobal(@Header("Authorization") token: String, @Path("id") id: String): Response<Unit>
+
+    @DELETE("tether/admin/global/communities/{id}")
+    suspend fun deleteCommunityGlobal(@Header("Authorization") token: String, @Path("id") id: String): Response<Unit>
+
+    @PUT("tether/admin/global/communities/{id}/rename")
+    suspend fun renameCommunityGlobal(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Body body: Map<String, String>
+    ): Response<Map<String, String>>
 
     // Admins (super admin only)
     @GET("tether/admin/members")

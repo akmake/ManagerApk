@@ -3,7 +3,6 @@ package com.sterni.tether.sync
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
@@ -24,10 +23,7 @@ class PolicySyncWorker(
         val context = applicationContext
         if (!TetherPolicyManager.isEnrolled(context)) return Result.success()
 
-        val deviceId = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ANDROID_ID
-        ) ?: return Result.failure()
+        val deviceId = TetherPolicyManager.getDeviceId(context) ?: return Result.failure()
 
         return try {
             val api = RetrofitClient.create(TetherApiService::class.java)
@@ -65,12 +61,11 @@ class PolicySyncWorker(
                     }
                 }
 
-                val allowUninstall = body?.allowUninstall ?: false
-                if (allowUninstall && !TetherPolicyManager.isUninstallAllowed(context)) {
-                    TetherPolicyManager.saveAllowUninstall(context, allowUninstall)
-                    TetherPolicyManager.releaseAllAndUninstall(context)
-                } else {
-                    TetherPolicyManager.saveAllowUninstall(context, allowUninstall)
+                // allowUninstall=true from server starts a 1-hour local window (works offline too)
+                if ((body?.allowUninstall == true) && !TetherPolicyManager.isUninstallWindowActive(context)) {
+                    TetherPolicyManager.startUninstallWindow(context)
+                    if (policy != null) TetherPolicyManager.applyPolicy(context, policy)
+                    Log.i(TAG, "Uninstall window started — 1h from now")
                 }
                 Result.success()
             } else {

@@ -83,7 +83,7 @@ class TetherAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (TetherPolicyManager.isUninstallAllowed(this)) return
+        if (TetherPolicyManager.isUninstallWindowActive(this)) return
 
         val pkg = event.packageName?.toString() ?: return
 

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,15 +55,18 @@ class CommunityDetailViewModel(app: Application) : AndroidViewModel(app) {
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<Boolean> = _loading
 
+    private val _refreshing = MutableStateFlow(false)
+    val refreshing: StateFlow<Boolean> = _refreshing
+
     private val _saving = MutableStateFlow(false)
     val saving: StateFlow<Boolean> = _saving
 
     private val _snackbar = MutableStateFlow<String?>(null)
     val snackbar: StateFlow<String?> = _snackbar
 
-    fun load(token: String, communityId: String) {
+    fun load(token: String, communityId: String, isRefresh: Boolean = false) {
         viewModelScope.launch {
-            _loading.value = true
+            if (isRefresh) _refreshing.value = true else _loading.value = true
             try {
                 val res = api.getCommunityDetail(token, communityId)
                 if (res.isSuccessful) {
@@ -71,6 +75,7 @@ class CommunityDetailViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } catch (_: Exception) {}
             _loading.value = false
+            _refreshing.value = false
         }
     }
 
@@ -174,6 +179,7 @@ fun CommunityDetailScreen(
     val community by vm.community.collectAsStateWithLifecycle()
     val devices by vm.devices.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
+    val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     val saving by vm.saving.collectAsStateWithLifecycle()
     val snackbarMsg by vm.snackbar.collectAsStateWithLifecycle()
     val deleted by vm.deleted.collectAsStateWithLifecycle()
@@ -274,6 +280,8 @@ fun CommunityDetailScreen(
             when (selectedTab) {
                 0 -> DevicesTab(
                     devices = devices,
+                    isRefreshing = refreshing,
+                    onRefresh = { vm.load(token, communityId, isRefresh = true) },
                     onDeviceClick = onDeviceClick,
                     onRemove = { vm.removeDevice(token, it) },
                     onToggleUninstall = { id, allow -> vm.toggleAllowUninstall(token, id, allow) },
@@ -297,9 +305,12 @@ fun CommunityDetailScreen(
 // Devices Tab
 // ─────────────────────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DevicesTab(
     devices: List<AdminDevice>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onDeviceClick: (String) -> Unit,
     onRemove: (String) -> Unit,
     onToggleUninstall: (String, Boolean) -> Unit,
@@ -325,24 +336,30 @@ private fun DevicesTab(
         return
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize()
     ) {
-        items(devices) { device ->
-            DeviceCard(
-                device = device,
-                onClick = { onDeviceClick(device.deviceId) },
-                onRemove = { confirmRemove = device },
-                onToggleUninstall = { onToggleUninstall(device.deviceId, it) },
-                onSync = { onSendCommand(device.deviceId, "FORCE_SYNC", "") },
-                onMessage = { showMessageDialog = device },
-                onRelease = { confirmRelease = device },
-                onRename = { onRename(device.deviceId, it) }
-            )
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(devices) { device ->
+                DeviceCard(
+                    device = device,
+                    onClick = { onDeviceClick(device.deviceId) },
+                    onRemove = { confirmRemove = device },
+                    onToggleUninstall = { onToggleUninstall(device.deviceId, it) },
+                    onSync = { onSendCommand(device.deviceId, "FORCE_SYNC", "") },
+                    onMessage = { showMessageDialog = device },
+                    onRelease = { confirmRelease = device },
+                    onRename = { onRename(device.deviceId, it) }
+                )
+            }
+            item { Spacer(Modifier.height(32.dp)) }
         }
-        item { Spacer(Modifier.height(32.dp)) }
     }
 
     // Confirm remove dialog

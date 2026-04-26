@@ -35,8 +35,9 @@ sealed class AdminScreen(val route: String) {
         fun route(code: String, name: String) =
             "admin_share/${encode(code)}/${encode(name)}"
     }
-    object ManageAdmins  : AdminScreen("admin_manage_admins")
-    object Provisioning  : AdminScreen("admin_provisioning")
+    object ManageAdmins   : AdminScreen("admin_manage_admins")
+    object Provisioning   : AdminScreen("admin_provisioning")
+    object GlobalOverview : AdminScreen("admin_global_overview")
     object DeviceDetail  : AdminScreen("admin_device/{deviceId}") {
         fun route(deviceId: String) = "admin_device/${encode(deviceId)}"
     }
@@ -135,6 +136,9 @@ fun AdminNavGraph(
                     onProvisioningClick = {
                         navController.navigate(AdminScreen.Provisioning.route)
                     },
+                    onGlobalOverviewClick = {
+                        navController.navigate(AdminScreen.GlobalOverview.route)
+                    },
                     onLogout = onExit
                 )
             }
@@ -221,6 +225,10 @@ fun AdminNavGraph(
 
             composable(AdminScreen.ManageAdmins.route) {
                 ManageAdminsScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(AdminScreen.GlobalOverview.route) {
+                GlobalOverviewScreen(onBack = { navController.popBackStack() })
             }
         }
     }

@@ -1,6 +1,8 @@
 package com.sterni.tether.ui.screens.admin
 
 import android.app.Application
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,9 +26,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sterni.tether.admin.AdminSession
 import com.sterni.tether.data.api.AdminApiService
 import com.sterni.tether.data.api.RetrofitClient
+import com.sterni.tether.data.model.AppTimeLock
 import com.sterni.tether.data.model.DeviceDetail
 import com.sterni.tether.data.model.DevicePolicy
 import com.sterni.tether.data.model.InstalledApp
+import com.sterni.tether.data.model.SecurityEvent
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -43,6 +50,9 @@ class DeviceDetailViewModel(app: Application) : AndroidViewModel(app) {
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<Boolean> = _loading
 
+    private val _refreshing = MutableStateFlow(false)
+    val refreshing: StateFlow<Boolean> = _refreshing
+
     private val _saving = MutableStateFlow(false)
     val saving: StateFlow<Boolean> = _saving
 
@@ -52,14 +62,20 @@ class DeviceDetailViewModel(app: Application) : AndroidViewModel(app) {
     private val _removed = MutableStateFlow(false)
     val removed: StateFlow<Boolean> = _removed
 
-    fun load(token: String, deviceId: String) {
+    private val _events = MutableStateFlow<List<SecurityEvent>>(emptyList())
+    val events: StateFlow<List<SecurityEvent>> = _events
+
+    fun load(token: String, deviceId: String, isRefresh: Boolean = false) {
         viewModelScope.launch {
-            _loading.value = true
+            if (isRefresh) _refreshing.value = true else _loading.value = true
             try {
-                val res = api.getDeviceDetail(token, deviceId)
-                if (res.isSuccessful) _device.value = res.body()
+                val deviceRes = api.getDeviceDetail(token, deviceId)
+                if (deviceRes.isSuccessful) _device.value = deviceRes.body()
+                val eventsRes = api.getDeviceEvents(token, deviceId)
+                if (eventsRes.isSuccessful) _events.value = eventsRes.body()?.events ?: emptyList()
             } catch (_: Exception) {}
             _loading.value = false
+            _refreshing.value = false
         }
     }
 
@@ -139,15 +155,18 @@ fun DeviceDetailScreen(
     val token = AdminSession.getToken(context) ?: ""
     val device by vm.device.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
+    val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     val saving by vm.saving.collectAsStateWithLifecycle()
     val snackbarMsg by vm.snackbar.collectAsStateWithLifecycle()
     val removed by vm.removed.collectAsStateWithLifecycle()
+    val events by vm.events.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var showMessageDialog by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
     var confirmRelease by remember { mutableStateOf(false) }
+    var confirmAllowUninstall by remember { mutableStateOf(false) }
     var editingNickname by remember { mutableStateOf(false) }
     var nicknameInput by remember(device?.deviceNickname) { mutableStateOf(device?.deviceNickname ?: "") }
 
@@ -206,6 +225,22 @@ fun DeviceDetailScreen(
         )
     }
 
+    if (confirmAllowUninstall) {
+        AlertDialog(
+            onDismissRequest = { confirmAllowUninstall = false },
+            icon = { Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("אפשר הסרת אפליקציה?") },
+            text = { Text("פעולה זו תאפשר למשתמש להסיר את Tether מהמכשיר. הגנות יבוטלו תוך דקה.") },
+            confirmButton = {
+                Button(
+                    onClick = { vm.toggleAllowUninstall(token, deviceId, true); confirmAllowUninstall = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("אשר") }
+            },
+            dismissButton = { OutlinedButton(onClick = { confirmAllowUninstall = false }) { Text("ביטול") } }
+        )
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -252,17 +287,25 @@ fun DeviceDetailScreen(
         }
         val d = device ?: return@Scaffold
 
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = { vm.load(token, deviceId, isRefresh = true) },
+            modifier = Modifier.fillMaxSize().padding(padding)
+        ) {
+        Column(Modifier.fillMaxSize()) {
             // ── Status header ──
             DeviceStatusHeader(d, onSync = { vm.sendCommand(token, deviceId, "FORCE_SYNC") },
                 onMessage = { showMessageDialog = true },
                 onRelease = { confirmRelease = true },
                 onRemove = { confirmRemove = true },
                 allowUninstall = d.allowUninstall,
-                onToggleUninstall = { vm.toggleAllowUninstall(token, deviceId, it) })
+                onToggleUninstall = { allow ->
+                    if (allow) confirmAllowUninstall = true
+                    else vm.toggleAllowUninstall(token, deviceId, false)
+                })
 
             // ── Tabs ──
-            val tabs = listOf("אפליקציות", "הגדרות אישיות")
+            val tabs = listOf("אפליקציות", "הגדרות אישיות", "אירועים")
             PrimaryTabRow(selectedTabIndex = selectedTab) {
                 tabs.forEachIndexed { i, title ->
                     Tab(selected = selectedTab == i, onClick = { selectedTab = i },
@@ -270,7 +313,8 @@ fun DeviceDetailScreen(
                         icon = {
                             Icon(when (i) {
                                 0 -> Icons.Outlined.Apps
-                                else -> Icons.Outlined.Tune
+                                1 -> Icons.Outlined.Tune
+                                else -> Icons.Outlined.Security
                             }, null, modifier = Modifier.size(18.dp))
                         }
                     )
@@ -300,8 +344,10 @@ fun DeviceDetailScreen(
                     saving = saving,
                     onSave = { vm.saveDevicePolicy(token, deviceId, it) }
                 )
+                2 -> SecurityEventsTab(events = events)
             }
         }
+        } // end PullToRefreshBox
     }
 }
 
@@ -570,6 +616,28 @@ private fun DevicePolicyTab(
                     }
                 }
             }
+
+            item {
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
+                            Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("נעילת זמן", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        }
+                        HorizontalDivider(Modifier.padding(bottom = 12.dp))
+                        DeviceTimeLockSection(
+                            lockedUntilTs = edited.lockedUntilTs,
+                            onChange = { edited = edited.copy(lockedUntilTs = it) }
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        DeviceAppTimeLocksSection(
+                            locks = edited.appTimeLocks,
+                            onChange = { edited = edited.copy(appTimeLocks = it) }
+                        )
+                    }
+                }
+            }
         }
 
         Box(Modifier.fillMaxWidth().align(Alignment.BottomCenter)
@@ -597,6 +665,160 @@ private fun NullablePolicyRow(label: String, value: Boolean?, onChange: (Boolean
                     label = { Text(labels[i], fontSize = 11.sp) },
                     modifier = Modifier.height(28.dp)
                 )
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Security Events Tab
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun SecurityEventsTab(events: List<SecurityEvent>) {
+    if (events.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Outlined.Security, null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                Text("אין אירועי אבטחה", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        return
+    }
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        item { Text("${events.size} אירועים (חדשים ראשונים)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        items(events) { event ->
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        when (event.type) {
+                            "UNINSTALL_ATTEMPT" -> Icons.Default.DeleteForever
+                            "ADMIN_DEACTIVATE_ATTEMPT" -> Icons.Default.AdminPanelSettings
+                            "BLOCKED_APP_OPENED" -> Icons.Default.Block
+                            "TIME_LOCK_BLOCKED" -> Icons.Default.Lock
+                            else -> Icons.Default.Warning
+                        },
+                        null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            when (event.type) {
+                                "UNINSTALL_ATTEMPT" -> "ניסיון הסרת אפליקציה"
+                                "ADMIN_DEACTIVATE_ATTEMPT" -> "ניסיון ביטול הרשאות מנהל"
+                                "BLOCKED_APP_OPENED" -> "ניסיון פתיחת אפליקציה חסומה"
+                                "TIME_LOCK_BLOCKED" -> "חסימת זמן פעלה"
+                                else -> event.type
+                            },
+                            fontSize = 13.sp, fontWeight = FontWeight.Medium
+                        )
+                        if (!event.packageName.isNullOrEmpty()) {
+                            Text(event.packageName, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(event.timestamp.take(19).replace("T", " "),
+                            fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeviceTimeLockSection(lockedUntilTs: Long?, onChange: (Long?) -> Unit) {
+    val context = LocalContext.current
+    val sdf = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
+    val now = System.currentTimeMillis()
+    val isLocked = lockedUntilTs != null && lockedUntilTs > now
+
+    val showPicker = {
+        val cal = Calendar.getInstance()
+        if (lockedUntilTs != null) cal.timeInMillis = lockedUntilTs
+        val timePicker = TimePickerDialog(context,
+            { _, h, m -> cal.set(Calendar.HOUR_OF_DAY, h); cal.set(Calendar.MINUTE, m); onChange(cal.timeInMillis) },
+            cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true)
+        DatePickerDialog(context,
+            { _, y, mo, d -> cal.set(y, mo, d); timePicker.show() },
+            cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
+    }
+
+    Column {
+        if (isLocked) {
+            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Lock, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("נעול עד: ${sdf.format(Date(lockedUntilTs!!))}", color = MaterialTheme.colorScheme.error, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { onChange(null) }, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+        OutlinedButton(onClick = showPicker, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.Schedule, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(if (isLocked) "שנה תאריך שחרור" else "נעל מכשיר זה עד...")
+        }
+    }
+}
+
+@Composable
+private fun DeviceAppTimeLocksSection(locks: List<AppTimeLock>, onChange: (List<AppTimeLock>) -> Unit) {
+    val context = LocalContext.current
+    val sdf = remember { SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()) }
+    var newPkg by remember { mutableStateOf("") }
+
+    Column {
+        Text("נעילת אפליקציות ספציפיות", fontWeight = FontWeight.Medium, fontSize = 13.sp, color = MaterialTheme.colorScheme.secondary)
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(value = newPkg, onValueChange = { newPkg = it },
+                placeholder = { Text("com.example.app", fontSize = 12.sp) },
+                singleLine = true, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
+            FilledTonalIconButton(onClick = {
+                val pkg = newPkg.trim()
+                if (pkg.isNotEmpty() && locks.none { it.packageName == pkg }) {
+                    onChange(locks + AppTimeLock(packageName = pkg, lockedUntilTs = null)); newPkg = ""
+                }
+            }) { Icon(Icons.Default.Add, null) }
+        }
+        locks.forEach { lock ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Block, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.width(6.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(lock.packageName, fontSize = 13.sp)
+                    Text(if (lock.lockedUntilTs == null) "חסום לצמיתות" else "חסום עד: ${sdf.format(Date(lock.lockedUntilTs))}",
+                        fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = {
+                    val cal = Calendar.getInstance()
+                    if (lock.lockedUntilTs != null) cal.timeInMillis = lock.lockedUntilTs
+                    val tp = TimePickerDialog(context, { _, h, m ->
+                        cal.set(Calendar.HOUR_OF_DAY, h); cal.set(Calendar.MINUTE, m)
+                        onChange(locks.map { if (it.packageName == lock.packageName) it.copy(lockedUntilTs = cal.timeInMillis) else it })
+                    }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true)
+                    DatePickerDialog(context, { _, y, mo, d -> cal.set(y, mo, d); tp.show() },
+                        cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
+                }, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                }
+                IconButton(onClick = { onChange(locks.filter { it.packageName != lock.packageName }) }, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }

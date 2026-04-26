@@ -22,7 +22,8 @@ object TetherPolicyManager {
     private const val KEY_DEVICE_ID = "device_id"
     private const val KEY_COMMUNITY_ID = "community_id"
     private const val KEY_COMMUNITY_NAME = "community_name"
-    private const val KEY_ALLOW_UNINSTALL = "allow_uninstall"
+    private const val KEY_UNINSTALL_EXPIRES_AT = "uninstall_expires_at"  // epoch ms, 0 = no active window
+    private const val UNINSTALL_WINDOW_MS = 60 * 60 * 1000L              // 1 hour
 
     private val gson = Gson()
 
@@ -53,10 +54,9 @@ object TetherPolicyManager {
             }
 
             // הגנה קיצונית: חסימת הסרה ברמת מערכת
-            val allowUninstall = isUninstallAllowed(context)
+            val allowUninstall = isUninstallWindowActive(context)
             dpm.setUninstallBlocked(admin, context.packageName, !allowUninstall)
-            
-            // מניעת השבתת האפליקציה (Disable)
+
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                 dpm.setApplicationHidden(admin, context.packageName, false)
             }
@@ -65,27 +65,15 @@ object TetherPolicyManager {
             applySafeBootRestriction(dpm, context, policy.blockSafeBoot)
             applyFactoryResetRestriction(dpm, context, policy.blockFactoryReset)
             applyUsbRestriction(dpm, context, policy.blockUsbTransfer)
-            // טיפול בנעילת זמן לכלל המסך/אפליקציות
             applyTimeLock(dpm, context, policy.lockedUntilTs)
-            // נעילת זמן פר-אפליקציה
             applyAppTimeLocks(dpm, context, policy.appTimeLocks)
 
-            // טיפול באפליקציות - החרגות
             val now = System.currentTimeMillis()
             val timeLockActive = policy.lockedUntilTs != null && policy.lockedUntilTs > now
             applyAppSuspension(dpm, context, if (timeLockActive) emptyList() else policy.allowedApps, policy.blockedApps)
 
             applyHiddenApps(dpm, context, policy.hideGooglePlay, policy.blockAllStores, policy.blockedApps)
             applyAntiBypassRestrictions(dpm, context, true)
-
-            if (allowUninstall) {
-                try {
-                    dpm.clearDeviceOwnerApp(context.packageName)
-                    Log.i(TAG, "Cleared DO app because uninstall is allowed")
-                } catch(e: Exception) {
-                    Log.w(TAG, "Could not clear DO", e)
-                }
-            }
 
             Log.i(TAG, "Policy applied successfully")
         } catch (e: SecurityException) {
@@ -224,6 +212,7 @@ object TetherPolicyManager {
             .putString(KEY_DEVICE_ID, deviceId)
             .putString(KEY_COMMUNITY_ID, communityId)
             .putString(KEY_COMMUNITY_NAME, communityName)
+            .putLong(KEY_UNINSTALL_EXPIRES_AT, 0L)  // always start fresh — no leftover windows
             .apply()
     }
 
@@ -238,15 +227,30 @@ object TetherPolicyManager {
 
     fun isEnrolled(context: Context): Boolean = getDeviceId(context) != null
 
-    fun saveAllowUninstall(context: Context, allow: Boolean) {
+    /** Starts a 1-hour local uninstall window. Works fully offline. */
+    fun startUninstallWindow(context: Context) {
+        val expiresAt = System.currentTimeMillis() + UNINSTALL_WINDOW_MS
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putBoolean(KEY_ALLOW_UNINSTALL, allow)
+            .putLong(KEY_UNINSTALL_EXPIRES_AT, expiresAt)
+            .apply()
+        Log.i(TAG, "Uninstall window started, expires in 1h (at $expiresAt)")
+    }
+
+    fun clearUninstallWindow(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putLong(KEY_UNINSTALL_EXPIRES_AT, 0L)
             .apply()
     }
 
-    fun isUninstallAllowed(context: Context): Boolean =
+    fun isUninstallWindowActive(context: Context): Boolean {
+        val expiresAt = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getLong(KEY_UNINSTALL_EXPIRES_AT, 0L)
+        return expiresAt > 0L && System.currentTimeMillis() < expiresAt
+    }
+
+    fun getUninstallExpiresAt(context: Context): Long =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY_ALLOW_UNINSTALL, false)
+            .getLong(KEY_UNINSTALL_EXPIRES_AT, 0L)
 
     fun clearEnrollment(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
@@ -292,10 +296,8 @@ object TetherPolicyManager {
     }
 
     fun releaseAllAndUninstall(context: Context) {
-        // Signal accessibility service to stand down FIRST — otherwise it blocks the uninstall dialog
-        saveAllowUninstall(context, true)
+        clearUninstallWindow(context)
         removeDeviceOwner(context)
-        // Clear enrollment data but keep allowUninstall=true so the service stays inactive
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .remove(KEY_DEVICE_ID)
             .remove(KEY_COMMUNITY_ID)

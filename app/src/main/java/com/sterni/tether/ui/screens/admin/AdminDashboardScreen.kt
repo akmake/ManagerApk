@@ -61,6 +61,7 @@ fun AdminDashboardScreen(
     onCommunitiesClick: () -> Unit,
     onApprovalsClick: () -> Unit,
     onProvisioningClick: () -> Unit,
+    onGlobalOverviewClick: () -> Unit = {},
     onLogout: () -> Unit,
     vm: AdminDashboardViewModel = viewModel()
 ) {
@@ -114,6 +115,18 @@ fun AdminDashboardScreen(
                     Icon(Icons.Default.QrCode, null)
                     Spacer(Modifier.width(8.dp))
                     Text("QR הגדרת מכשיר חדש", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            // Global overview button
+            item {
+                OutlinedButton(
+                    onClick = onGlobalOverviewClick,
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    Icon(Icons.Default.ManageSearch, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("סקירה גלובלית — כל המכשירים והקהילות", fontSize = 14.sp)
                 }
             }
 

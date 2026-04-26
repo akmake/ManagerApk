@@ -72,6 +72,7 @@ data class DevicePolicy(
     val blockApkInstall: Boolean? = null,
     val blockedApps: List<String> = emptyList(),
     val allowedApps: List<String> = emptyList(),
+    val appTimeLocks: List<AppTimeLock> = emptyList(),
     val lockedUntilTs: Long? = null
 )
 
@@ -94,6 +95,18 @@ data class DeviceDetail(
     val isOnline: Boolean = false
 )
 
+// Security event reported by device
+data class SecurityEvent(
+    val type: String,
+    val packageName: String? = null,
+    val timestamp: String
+)
+
+data class SecurityEventsResponse(
+    val protectionStatus: ProtectionStatus,
+    val events: List<SecurityEvent>
+)
+
 // Logs
 data class LogEntry(
     val id: String,
@@ -103,6 +116,36 @@ data class LogEntry(
     val result: String,
     val packageName: String?,
     val timestamp: String
+)
+
+// Global overview — all devices/communities regardless of status
+data class GlobalDevice(
+    val id: String,
+    val deviceId: String,
+    val deviceModel: String,
+    val deviceNickname: String? = null,
+    val communityId: String? = null,
+    val communityName: String,
+    val communityCode: String = "",
+    val isDeviceOwner: Boolean = false,
+    val allowUninstall: Boolean = false,
+    val active: Boolean = true,
+    val lastSeen: String,
+    val createdAt: String,
+    val isOnline: Boolean = false,
+    val protectionStatus: ProtectionStatus = ProtectionStatus()
+)
+
+data class GlobalCommunity(
+    val id: String,
+    val name: String,
+    val code: String,
+    val active: Boolean = true,
+    val adminName: String,
+    val adminEmail: String = "",
+    val deviceCount: Int = 0,
+    val activeDeviceCount: Int = 0,
+    val createdAt: String
 )
 
 // Manage admins
