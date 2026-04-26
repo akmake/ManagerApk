@@ -37,6 +37,9 @@ sealed class AdminScreen(val route: String) {
     }
     object ManageAdmins  : AdminScreen("admin_manage_admins")
     object Provisioning  : AdminScreen("admin_provisioning")
+    object DeviceDetail  : AdminScreen("admin_device/{deviceId}") {
+        fun route(deviceId: String) = "admin_device/${encode(deviceId)}"
+    }
 }
 
 private fun encode(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
@@ -169,10 +172,22 @@ fun AdminNavGraph(
                     onShareClick = { code, name ->
                         navController.navigate(AdminScreen.ShareCode.route(code, name))
                     },
+                    onDeviceClick = { deviceId ->
+                        navController.navigate(AdminScreen.DeviceDetail.route(deviceId))
+                    },
                     onBack = { navController.popBackStack() },
-                    onDeleted = {
-                        navController.popBackStack()
-                    }
+                    onDeleted = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = AdminScreen.DeviceDetail.route,
+                arguments = listOf(navArgument("deviceId") { type = NavType.StringType })
+            ) { back ->
+                val deviceId = decode(back.arguments?.getString("deviceId") ?: "")
+                DeviceDetailScreen(
+                    deviceId = deviceId,
+                    onBack = { navController.popBackStack() }
                 )
             }
 

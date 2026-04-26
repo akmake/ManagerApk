@@ -47,7 +47,10 @@ class JoinCommunityViewModel(app: Application) : AndroidViewModel(app) {
 
     fun joinCommunity(code: String) {
         val context = getApplication<Application>()
-        val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        // Use ANDROID_ID as hardware fingerprint but generate a fresh UUID as the
+        // actual device identity so every join creates a truly new record on the server.
+        val hardwareId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        val deviceId = java.util.UUID.randomUUID().toString()
         val deviceModel = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
 
         viewModelScope.launch {
@@ -57,6 +60,7 @@ class JoinCommunityViewModel(app: Application) : AndroidViewModel(app) {
                     JoinCommunityRequest(
                         code = code.trim().uppercase(),
                         deviceId = deviceId,
+                        hardwareId = hardwareId,
                         deviceModel = deviceModel
                     )
                 )

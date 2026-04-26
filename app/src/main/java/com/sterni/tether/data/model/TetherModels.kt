@@ -61,6 +61,7 @@ data class TetherDevice(
 data class JoinCommunityRequest(
     val code: String,
     val deviceId: String,
+    val hardwareId: String,
     val deviceModel: String
 )
 

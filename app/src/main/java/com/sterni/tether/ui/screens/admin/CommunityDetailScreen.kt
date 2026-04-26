@@ -164,6 +164,7 @@ class CommunityDetailViewModel(app: Application) : AndroidViewModel(app) {
 fun CommunityDetailScreen(
     communityId: String,
     onShareClick: (String, String) -> Unit,
+    onDeviceClick: (String) -> Unit = {},
     onBack: () -> Unit,
     onDeleted: () -> Unit = onBack,
     vm: CommunityDetailViewModel = viewModel()
@@ -273,6 +274,7 @@ fun CommunityDetailScreen(
             when (selectedTab) {
                 0 -> DevicesTab(
                     devices = devices,
+                    onDeviceClick = onDeviceClick,
                     onRemove = { vm.removeDevice(token, it) },
                     onToggleUninstall = { id, allow -> vm.toggleAllowUninstall(token, id, allow) },
                     onSendCommand = { id, type, payload -> vm.sendCommand(token, id, type, payload) },
@@ -298,6 +300,7 @@ fun CommunityDetailScreen(
 @Composable
 private fun DevicesTab(
     devices: List<AdminDevice>,
+    onDeviceClick: (String) -> Unit,
     onRemove: (String) -> Unit,
     onToggleUninstall: (String, Boolean) -> Unit,
     onSendCommand: (String, String, String) -> Unit,
@@ -330,6 +333,7 @@ private fun DevicesTab(
         items(devices) { device ->
             DeviceCard(
                 device = device,
+                onClick = { onDeviceClick(device.deviceId) },
                 onRemove = { confirmRemove = device },
                 onToggleUninstall = { onToggleUninstall(device.deviceId, it) },
                 onSync = { onSendCommand(device.deviceId, "FORCE_SYNC", "") },
@@ -421,6 +425,7 @@ private fun DevicesTab(
 @Composable
 private fun DeviceCard(
     device: AdminDevice,
+    onClick: () -> Unit,
     onRemove: () -> Unit,
     onToggleUninstall: (Boolean) -> Unit,
     onSync: () -> Unit,
@@ -433,7 +438,7 @@ private fun DeviceCard(
         mutableStateOf(device.deviceNickname ?: "")
     }
 
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Column(Modifier.padding(16.dp)) {
 
             // ── Header row ──

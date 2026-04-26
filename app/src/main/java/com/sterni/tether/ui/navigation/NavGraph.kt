@@ -17,6 +17,7 @@ import com.sterni.tether.ui.screens.join.DeviceAdminPermissionScreen
 import com.sterni.tether.ui.screens.join.EnrollmentSuccessScreen
 import com.sterni.tether.ui.screens.join.JoinCommunityScreen
 import com.sterni.tether.ui.screens.join.QrScannerScreen
+import com.sterni.tether.ui.screens.join.isAccessibilityEnabled
 import com.sterni.tether.ui.screens.news.NewsScreen
 import com.sterni.tether.ui.screens.onboarding.OnboardingScreen
 import com.sterni.tether.ui.screens.settings.SettingsScreen
@@ -31,7 +32,9 @@ sealed class Screen(val route: String) {
             "community_found/${encode(code)}/${encode(name)}"
     }
     object DeviceAdmin            : Screen("device_admin")
-    object AccessibilityPermission: Screen("accessibility_permission")
+    object AccessibilityPermission: Screen("accessibility_permission?direct={direct}") {
+        fun createRoute(direct: Boolean = false) = "accessibility_permission?direct=$direct"
+    }
     object VpnPermission          : Screen("vpn_permission")
     object EnrollmentSuccess : Screen("enrollment_success/{name}") {
         fun createRoute(name: String) = "enrollment_success/${encode(name)}"
@@ -56,8 +59,11 @@ fun NavGraph(
 
         composable(Screen.Splash.route) {
             SplashScreen(onFinished = {
-                val dest = if (TetherPolicyManager.isEnrolled(context))
-                    Screen.Home.route else Screen.Onboarding.route
+                val dest = when {
+                    !TetherPolicyManager.isEnrolled(context) -> Screen.Onboarding.route
+                    !isAccessibilityEnabled(context) -> Screen.AccessibilityPermission.createRoute(direct = true)
+                    else -> Screen.Home.route
+                }
                 navController.navigate(dest) {
                     popUpTo(Screen.Splash.route) { inclusive = true }
                 }
@@ -106,10 +112,20 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.AccessibilityPermission.route) {
+        composable(
+            route = Screen.AccessibilityPermission.route,
+            arguments = listOf(navArgument("direct") { type = NavType.BoolType; defaultValue = false })
+        ) { back ->
+            val direct = back.arguments?.getBoolean("direct") ?: false
             AccessibilityPermissionScreen(
                 onGranted = {
-                    navController.navigate(Screen.VpnPermission.route)
+                    if (direct) {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(Screen.VpnPermission.route)
+                    }
                 }
             )
         }

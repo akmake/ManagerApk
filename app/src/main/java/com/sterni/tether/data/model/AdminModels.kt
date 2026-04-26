@@ -57,6 +57,43 @@ data class AdminDevice(
     val isOnline: Boolean = false
 )
 
+// Installed app reported by device
+data class InstalledApp(
+    val packageName: String,
+    val appName: String,
+    val isSystemApp: Boolean = false
+)
+
+// Per-device policy overrides (null = inherit from community)
+data class DevicePolicy(
+    val blockInstallApps: Boolean? = null,
+    val hideGooglePlay: Boolean? = null,
+    val blockAllStores: Boolean? = null,
+    val blockApkInstall: Boolean? = null,
+    val blockedApps: List<String> = emptyList(),
+    val allowedApps: List<String> = emptyList(),
+    val lockedUntilTs: Long? = null
+)
+
+// Full device detail returned by GET /admin/devices/:deviceId
+data class DeviceDetail(
+    val id: String,
+    val deviceId: String,
+    val deviceModel: String,
+    val deviceNickname: String? = null,
+    val communityId: String,
+    val communityName: String,
+    val isDeviceOwner: Boolean,
+    val allowUninstall: Boolean = false,
+    val lastSeen: String,
+    val active: Boolean,
+    val createdAt: String,
+    val devicePolicy: DevicePolicy = DevicePolicy(),
+    val installedApps: List<InstalledApp> = emptyList(),
+    val protectionStatus: ProtectionStatus = ProtectionStatus(),
+    val isOnline: Boolean = false
+)
+
 // Logs
 data class LogEntry(
     val id: String,
