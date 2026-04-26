@@ -1,9 +1,13 @@
 package com.sterni.tether.sync
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.provider.Settings
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.work.*
+import com.sterni.tether.R
 import com.sterni.tether.admin.AppScanner
 import com.sterni.tether.admin.TetherPolicyManager
 import com.sterni.tether.data.model.ReportAppsRequest
@@ -30,15 +34,12 @@ class PolicySyncWorker(
             val response = api.getPolicy(deviceId)
 
             try {
-                // Heartbeat מורחב: מדווח על מצב ההגנות
                 val isDo = TetherPolicyManager.isDeviceOwner(context)
                 val isA11y = com.sterni.tether.admin.TetherAccessibilityService.isRunning
                 val installed = AppScanner.getInstalledApps(context)
-                
-                // שליחת דיווח מפורט לשרת
                 api.reportApps(deviceId, ReportAppsRequest(deviceId = deviceId, apps = installed))
                 Log.i(TAG, "Heartbeat sent: DO=$isDo, A11y=$isA11y")
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 Log.e(TAG, "Failed to report status: " + e.message)
             }
 
@@ -52,16 +53,22 @@ class PolicySyncWorker(
                         Log.i(TAG, "Policy updated and applied")
                     }
                 }
+
+                // Execute pending commands from admin
+                val commands = body?.pendingCommands ?: emptyList()
+                for (command in commands) {
+                    Log.i(TAG, "Executing command: ${command.type} payload=${command.payload}")
+                    when (command.type) {
+                        "SHOW_MESSAGE" -> showAdminMessage(context, command.payload)
+                        "FORCE_SYNC"   -> if (policy != null) TetherPolicyManager.applyPolicy(context, policy)
+                        "RELEASE_ALL"  -> TetherPolicyManager.releaseAllAndUninstall(context)
+                    }
+                }
+
                 val allowUninstall = body?.allowUninstall ?: false
                 if (allowUninstall && !TetherPolicyManager.isUninstallAllowed(context)) {
                     TetherPolicyManager.saveAllowUninstall(context, allowUninstall)
-                    TetherPolicyManager.removeDeviceOwner(context)
-                    TetherPolicyManager.clearEnrollment(context)
-                    val intent = android.content.Intent(android.content.Intent.ACTION_DELETE).apply {
-                        data = android.net.Uri.parse("package:${context.packageName}")
-                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    context.startActivity(intent)
+                    TetherPolicyManager.releaseAllAndUninstall(context)
                 } else {
                     TetherPolicyManager.saveAllowUninstall(context, allowUninstall)
                 }
@@ -76,9 +83,27 @@ class PolicySyncWorker(
         }
     }
 
+    private fun showAdminMessage(context: Context, message: String) {
+        if (message.isBlank()) return
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "tether_admin_msg"
+        nm.createNotificationChannel(
+            NotificationChannel(channelId, "הודעות מנהל", NotificationManager.IMPORTANCE_HIGH)
+        )
+        val notif = NotificationCompat.Builder(context, channelId)
+            .setContentTitle("הודעה מהמנהל")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setSmallIcon(R.drawable.app_logo)
+            .setAutoCancel(true)
+            .build()
+        nm.notify(NOTIF_ID_ADMIN_MSG, notif)
+    }
+
     companion object {
         private const val TAG = "PolicySync"
         private const val WORK_NAME = "tether_policy_sync"
+        private const val NOTIF_ID_ADMIN_MSG = 2001
 
         fun enqueue(context: Context) {
             val request = PeriodicWorkRequestBuilder<PolicySyncWorker>(15, TimeUnit.MINUTES)

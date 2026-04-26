@@ -17,7 +17,11 @@
       "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell pm list packages)",
       "Bash(./gradlew compileDebugKotlin)",
       "PowerShell(cd \"c:\\\\Users\\\\yosef dahan\\\\Documents\\\\GitHub\\\\ManagerApk\"; $env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:PATH\"; .\\\\gradlew.bat compileDebugKotlin 2>&1 | Select-Object -Last 30)",
-      "PowerShell(cd \"c:\\\\Users\\\\yosef dahan\\\\Documents\\\\GitHub\\\\ManagerApk\"; $env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:PATH\"; .\\\\gradlew.bat assembleDebug 2>&1 | Select-Object -Last 20)"
+      "PowerShell(cd \"c:\\\\Users\\\\yosef dahan\\\\Documents\\\\GitHub\\\\ManagerApk\"; $env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; $env:PATH = \"$env:JAVA_HOME\\\\bin;$env:PATH\"; .\\\\gradlew.bat assembleDebug 2>&1 | Select-Object -Last 20)",
+      "PowerShell(adb devices)",
+      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" -ErrorAction SilentlyContinue; Get-ChildItem \"C:\\\\Users\\\\yosef dahan\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" -ErrorAction SilentlyContinue)",
+      "PowerShell(& \"C:\\\\Users\\\\yosef dahan\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" devices)",
+      "PowerShell(& \"C:\\\\Users\\\\yosef dahan\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" -s R5CW2094FPW uninstall com.sterni.tether)"
     ]
   }
 }

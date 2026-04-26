@@ -34,6 +34,12 @@ class MainActivity : ComponentActivity() {
         // Force apply policy on startup
         com.sterni.tether.admin.TetherPolicyManager.applyStoredPolicy(this)
 
+        // הפעלת VPN להגנת רשת אם מחובר לקהילה
+        if (com.sterni.tether.admin.TetherPolicyManager.isEnrolled(this)) {
+            startForegroundService(android.content.Intent(this, com.sterni.tether.admin.TetherVpnService::class.java))
+            com.sterni.tether.admin.TetherWatchdogService.start(this)
+        }
+
         PolicySyncWorker.enqueue(this)
         CalendarReminderWorker.enqueuePeriodic(this)
 

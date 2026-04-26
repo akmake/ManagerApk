@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.UserManager
 import android.util.Log
 import com.google.gson.Gson
+import com.sterni.tether.data.model.AppTimeLock
 import com.sterni.tether.data.model.BlockedActionBehavior
 import com.sterni.tether.data.model.CommunityPolicy
 
@@ -66,7 +67,9 @@ object TetherPolicyManager {
             applyUsbRestriction(dpm, context, policy.blockUsbTransfer)
             // טיפול בנעילת זמן לכלל המסך/אפליקציות
             applyTimeLock(dpm, context, policy.lockedUntilTs)
-            
+            // נעילת זמן פר-אפליקציה
+            applyAppTimeLocks(dpm, context, policy.appTimeLocks)
+
             // טיפול באפליקציות - החרגות
             applyAppSuspension(dpm, context, policy.allowedApps, policy.blockedApps)
             
@@ -224,7 +227,7 @@ object TetherPolicyManager {
 
         try {
             if (dpm.isDeviceOwnerApp(context.packageName)) {
-                // מנקה את כל ההגבלות לפני הסרת Device Owner
+                // Device Owner — מנקה את כל ההגבלות לפני הסרה
                 listOf(
                     UserManager.DISALLOW_INSTALL_APPS,
                     UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
@@ -243,16 +246,28 @@ object TetherPolicyManager {
                 }
                 dpm.setUninstallBlocked(admin, context.packageName, false)
                 dpm.clearDeviceOwnerApp(context.packageName)
-                Log.i(TAG, "Device Owner privileges removed successfully")
+                Log.i(TAG, "Device Owner removed successfully")
+            } else if (dpm.isAdminActive(admin)) {
+                // Device Admin בלבד — מספיק להסיר את עצמנו
+                dpm.removeActiveAdmin(admin)
+                Log.i(TAG, "Device Admin removed successfully")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to remove Device Owner: ${e.message}", e)
+            Log.e(TAG, "Failed to remove device admin: ${e.message}", e)
         }
     }
 
     fun releaseAllAndUninstall(context: Context) {
+        // Signal accessibility service to stand down FIRST — otherwise it blocks the uninstall dialog
+        saveAllowUninstall(context, true)
         removeDeviceOwner(context)
-        clearEnrollment(context)
+        // Clear enrollment data but keep allowUninstall=true so the service stays inactive
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .remove(KEY_DEVICE_ID)
+            .remove(KEY_COMMUNITY_ID)
+            .remove(KEY_COMMUNITY_NAME)
+            .remove(KEY_POLICY)
+            .apply()
         try {
             val intent = Intent(Intent.ACTION_DELETE).apply {
                 data = android.net.Uri.parse("package:${context.packageName}")
@@ -332,6 +347,21 @@ object TetherPolicyManager {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed suspending apps", e)
+        }
+    }
+
+    private fun applyAppTimeLocks(dpm: DevicePolicyManager, context: Context, locks: List<AppTimeLock>) {
+        if (locks.isEmpty()) return
+        val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+        val now = System.currentTimeMillis()
+        for (lock in locks) {
+            val shouldBlock = lock.lockedUntilTs == null || lock.lockedUntilTs > now
+            try {
+                dpm.setPackagesSuspended(admin, arrayOf(lock.packageName), shouldBlock)
+                Log.d(TAG, "App time-lock ${lock.packageName}: suspended=$shouldBlock")
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not set time-lock for ${lock.packageName}: ${e.message}")
+            }
         }
     }
 

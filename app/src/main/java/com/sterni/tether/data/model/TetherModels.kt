@@ -8,15 +8,23 @@ data class Community(
     val adminId: String
 )
 
+data class AppTimeLock(
+    val packageName: String,
+    val lockedUntilTs: Long? = null  // null = permanent block
+)
+
 data class CommunityPolicy(
     val blockInstallApps: Boolean = true,
     val hideGooglePlay: Boolean = true,
+    val blockAllStores: Boolean = false,   // per-device: block all store UIs
+    val blockApkInstall: Boolean = true,   // per-device: block APK sideloading
     val blockSafeBoot: Boolean = true,
     val blockFactoryReset: Boolean = true,
     val blockUsbTransfer: Boolean = false,
     val maxInstalledApps: Int? = null,
     val allowedApps: List<String> = emptyList(),
     val blockedApps: List<String> = emptyList(),
+    val appTimeLocks: List<AppTimeLock> = emptyList(),
     val blockedActionBehavior: BlockedActionBehavior = BlockedActionBehavior.SILENT,
     val logsEnabled: Boolean = false,
     val webFilterMode: WebFilterMode = WebFilterMode.NONE,

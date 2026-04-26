@@ -141,8 +141,9 @@ class TetherWatchdogService : Service() {
         return dpm.isAdminActive(admin)
     }
 
+    // VPN תמיד רץ כשמחובר לקהילה — חוסם הורדת APK ברמת הרשת
     private fun isVpnNeeded(): Boolean =
-        TetherPolicyManager.loadPolicy(this)?.webFilterMode != WebFilterMode.NONE
+        TetherPolicyManager.isEnrolled(this)
 
     // ── Heartbeat ────────────────────────────────────────────────────────────
 

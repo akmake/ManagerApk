@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sterni.tether.ui.screens.join.isAccessibilityEnabled
 import com.sterni.tether.ui.theme.TetherTheme
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -34,7 +35,15 @@ fun HomeScreen(
     val context = LocalContext.current
     var adminHoldCount by remember { mutableIntStateOf(0) }
     var showAdminDialog by remember { mutableStateOf(false) }
-    val accessibilityEnabled = remember { isAccessibilityEnabled(context) }
+    var accessibilityEnabled by remember { mutableStateOf(isAccessibilityEnabled(context)) }
+
+    // Poll every 2 seconds so the banner updates when user returns from Settings
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(2000)
+            accessibilityEnabled = isAccessibilityEnabled(context)
+        }
+    }
 
     if (showAdminDialog) {
         AlertDialog(
