@@ -56,6 +56,11 @@
             android:name=".notification.CalendarReminderReceiver"
             android:exported="true" />
 
+        <!-- Silent self-update install result -->
+        <receiver
+            android:name=".admin.TetherInstallReceiver"
+            android:exported="false" />
+
         <!-- Boot receiver — reapplies policies and restarts protection services after reboot -->
         <receiver
             android:name=".admin.BootPolicyReceiver"

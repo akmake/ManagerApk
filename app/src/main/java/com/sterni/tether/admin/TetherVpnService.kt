@@ -269,8 +269,7 @@ class TetherVpnService : VpnService() {
      *  3. WHITELIST → block anything NOT in allowedDomains
      */
     private fun isDomainBlockedByPolicy(domain: String, policy: CommunityPolicy?): Boolean {
-        // חוסם הורדת APK מגוגל תמיד כשמחובר — ללא קשר לפוליסי
-        if (TetherPolicyManager.isEnrolled(this) && isPlayStoreDomain(domain)) return true
+        if (policy?.hideGooglePlay == true && isPlayStoreDomain(domain)) return true
 
         if (policy == null) return false
 
@@ -315,7 +314,6 @@ class TetherVpnService : VpnService() {
     }
 
     private fun isDomainAllowed(domain: String, allowedDomains: List<String>): Boolean {
-        if (domain.contains("dahanswebsite.com")) return true
         return allowedDomains.any { allowed ->
             domain == allowed || domain.endsWith(".$allowed")
         }

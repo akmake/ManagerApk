@@ -33,17 +33,28 @@ data class AdminCommunity(
 // Create community
 data class CreateCommunityRequest(val name: String, val policy: CommunityPolicy)
 
+// Protection status reported by device heartbeat
+data class ProtectionStatus(
+    val accessibilityEnabled: Boolean = false,
+    val isDeviceAdmin: Boolean = false,
+    val isDeviceOwner: Boolean = false,
+    val vpnActive: Boolean = false
+)
+
 // Device (admin view)
 data class AdminDevice(
     val id: String,
     val deviceId: String,
     val deviceModel: String,
+    val deviceNickname: String? = null,
     val communityId: String,
     val isDeviceOwner: Boolean,
     val allowUninstall: Boolean = false,
     val lastSeen: String,
     val active: Boolean,
-    val createdAt: String
+    val createdAt: String,
+    val protectionStatus: ProtectionStatus = ProtectionStatus(),
+    val isOnline: Boolean = false
 )
 
 // Logs
@@ -62,6 +73,7 @@ data class AdminMember(
     val id: String,
     val name: String,
     val email: String,
-    val communities: List<String>
+    val role: String = "admin",
+    val active: Boolean = true
 )
-data class InviteAdminRequest(val email: String, val communityIds: List<String>)
+data class InviteAdminRequest(val name: String, val email: String, val password: String)

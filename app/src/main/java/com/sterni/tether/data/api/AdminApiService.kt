@@ -78,6 +78,21 @@ interface AdminApiService {
         @Body body: Map<String, String>
     ): Response<ApprovalRequest>
 
+    // Per-device commands
+    @POST("tether/admin/devices/{deviceId}/commands")
+    suspend fun sendCommand(
+        @Header("Authorization") token: String,
+        @Path("deviceId") deviceId: String,
+        @Body body: Map<String, String>
+    ): Response<Map<String, Any>>
+
+    @PUT("tether/admin/devices/{deviceId}/nickname")
+    suspend fun renameDevice(
+        @Header("Authorization") token: String,
+        @Path("deviceId") deviceId: String,
+        @Body body: Map<String, String?>
+    ): Response<Map<String, String?>>
+
     // Logs
     @GET("tether/admin/communities/{id}/logs")
     suspend fun getLogs(

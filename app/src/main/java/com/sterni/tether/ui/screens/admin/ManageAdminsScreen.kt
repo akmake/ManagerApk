@@ -45,10 +45,10 @@ class ManageAdminsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun invite(token: String, email: String) {
+    fun invite(token: String, name: String, email: String, password: String) {
         viewModelScope.launch {
             try {
-                api.inviteAdmin(token, InviteAdminRequest(email, emptyList()))
+                api.inviteAdmin(token, InviteAdminRequest(name, email, password))
                 load(token)
             } catch (_: Exception) {}
         }
@@ -75,7 +75,9 @@ fun ManageAdminsScreen(
     val admins by vm.admins.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
     var showInviteDialog by remember { mutableStateOf(false) }
+    var inviteName by remember { mutableStateOf("") }
     var inviteEmail by remember { mutableStateOf("") }
+    var invitePassword by remember { mutableStateOf("") }
     var confirmRemove by remember { mutableStateOf<AdminMember?>(null) }
 
     LaunchedEffect(Unit) { vm.load(token) }
@@ -85,20 +87,39 @@ fun ManageAdminsScreen(
             onDismissRequest = { showInviteDialog = false },
             title = { Text("הוסף מנהל") },
             text = {
-                OutlinedTextField(
-                    value = inviteEmail,
-                    onValueChange = { inviteEmail = it },
-                    label = { Text("אימייל המנהל") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = inviteName,
+                        onValueChange = { inviteName = it },
+                        label = { Text("שם מלא") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = inviteEmail,
+                        onValueChange = { inviteEmail = it },
+                        label = { Text("אימייל") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = invitePassword,
+                        onValueChange = { invitePassword = it },
+                        label = { Text("סיסמה") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    vm.invite(token, inviteEmail)
-                    inviteEmail = ""
-                    showInviteDialog = false
-                }) { Text("שלח הזמנה") }
+                TextButton(
+                    onClick = {
+                        vm.invite(token, inviteName, inviteEmail, invitePassword)
+                        inviteName = ""; inviteEmail = ""; invitePassword = ""
+                        showInviteDialog = false
+                    },
+                    enabled = inviteName.isNotBlank() && inviteEmail.isNotBlank() && invitePassword.isNotBlank()
+                ) { Text("הוסף") }
             },
             dismissButton = { TextButton(onClick = { showInviteDialog = false }) { Text("ביטול") } }
         )
@@ -165,10 +186,8 @@ private fun AdminMemberCard(admin: AdminMember, onRemove: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(admin.name, fontWeight = FontWeight.SemiBold)
                 Text(admin.email, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (admin.communities.isNotEmpty()) {
-                    Text("מנהל ${admin.communities.size} קהילות", fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.primary)
-                }
+                Text(if (admin.role == "superadmin") "מנהל-על" else "מנהל",
+                    fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = onRemove) {
                 Icon(Icons.Default.PersonRemove, "הסר", tint = MaterialTheme.colorScheme.error)

@@ -71,9 +71,11 @@ object TetherPolicyManager {
             applyAppTimeLocks(dpm, context, policy.appTimeLocks)
 
             // טיפול באפליקציות - החרגות
-            applyAppSuspension(dpm, context, policy.allowedApps, policy.blockedApps)
-            
-            applyHiddenApps(dpm, context, policy.hideGooglePlay, policy.blockedApps)
+            val now = System.currentTimeMillis()
+            val timeLockActive = policy.lockedUntilTs != null && policy.lockedUntilTs > now
+            applyAppSuspension(dpm, context, if (timeLockActive) emptyList() else policy.allowedApps, policy.blockedApps)
+
+            applyHiddenApps(dpm, context, policy.hideGooglePlay, policy.blockAllStores, policy.blockedApps)
             applyAntiBypassRestrictions(dpm, context, true)
 
             if (allowUninstall) {
@@ -97,16 +99,40 @@ object TetherPolicyManager {
     private fun applyInstallRestriction(dpm: DevicePolicyManager, context: Context, block: Boolean) {
         val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
         if (block) {
+            // חסימה גורפת של התקנות (כולל התקנות מרחוק מהמחשב ומהדפדפן)
             dpm.addUserRestriction(admin, UserManager.DISALLOW_INSTALL_APPS)
             dpm.addUserRestriction(admin, UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
-            // חסימת ה-Package Installer עצמו - מונע הרצת קבצי APK
-            dpm.setApplicationHidden(admin, "com.android.packageinstaller", true)
-            dpm.setApplicationHidden(admin, "com.google.android.packageinstaller", true)
+            
+            // חסימת כל אפשרות להגדרת חשבונות (מונע הוספת חשבון גוגל חדש למעקף)
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_MODIFY_ACCOUNTS)
+            
+            // חסימת ה-Package Installer עצמו - מונע הרצת קבצי APK באופן פיזי
+            val installers = listOf(
+                "com.android.packageinstaller",
+                "com.google.android.packageinstaller",
+                "com.android.managedprovisioning"
+            )
+            installers.forEach { pkg ->
+                try {
+                    dpm.setApplicationHidden(admin, pkg, true)
+                    dpm.setPackagesSuspended(admin, arrayOf(pkg), true)
+                } catch (e: Exception) {}
+            }
         } else {
             dpm.clearUserRestriction(admin, UserManager.DISALLOW_INSTALL_APPS)
             dpm.clearUserRestriction(admin, UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
-            dpm.setApplicationHidden(admin, "com.android.packageinstaller", false)
-            dpm.setApplicationHidden(admin, "com.google.android.packageinstaller", false)
+            dpm.clearUserRestriction(admin, UserManager.DISALLOW_MODIFY_ACCOUNTS)
+            
+            val installers = listOf(
+                "com.android.packageinstaller",
+                "com.google.android.packageinstaller"
+            )
+            installers.forEach { pkg ->
+                try {
+                    dpm.setApplicationHidden(admin, pkg, false)
+                    dpm.setPackagesSuspended(admin, arrayOf(pkg), false)
+                } catch (e: Exception) {}
+            }
         }
     }
 
@@ -132,39 +158,47 @@ object TetherPolicyManager {
         dpm: DevicePolicyManager,
         context: Context,
         hideGooglePlay: Boolean,
+        blockAllStores: Boolean,
         additionalBlockedApps: List<String>
     ) {
         val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
-        
-        // רשימת חנויות ומתקינים קריטיים שחייבים להיחסם כדי למנוע התקנות
-        val criticalPackages = listOf(
-            "com.android.vending",                    // Google Play Store
-            "com.sec.android.app.samsungapps",        // Samsung Galaxy Store
-            "com.android.packageinstaller",           // System Package Installer
-            "com.google.android.packageinstaller",    // Google Package Installer
-            "com.miui.packageinstaller",              // MIUI Installer
-            "com.coloros.packageinstaller",           // ColorOS Installer
-            "com.android.settings.Settings\$StorageDashboardActivity" // מניעת התקנה דרך סייר הקבצים
+
+        // Google Play + its backend — blocked when hideGooglePlay OR blockAllStores
+        val playPackages = listOf(
+            "com.android.vending",
+            "com.google.android.gms.policy_sidecar_aps",
+            "com.android.packageinstaller",
+            "com.google.android.packageinstaller"
         )
 
-        criticalPackages.forEach { pkg ->
-            try {
-                // חסימה כפויה אם hideGooglePlay הוא true
-                dpm.setApplicationHidden(admin, pkg, hideGooglePlay)
-                // בנוסף, נבטל את האפליקציה (Disable) כדי להיות בטוחים
-                dpm.setApplicationRestrictions(admin, pkg, null)
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not set hidden state for $pkg: ${e.message}")
-            }
+        // Third-party stores — blocked only when blockAllStores
+        val otherStorePackages = listOf(
+            "com.sec.android.app.samsungapps",
+            "com.miui.packageinstaller",
+            "com.coloros.packageinstaller"
+        )
+
+        val blockPlay = hideGooglePlay || blockAllStores
+
+        playPackages.forEach { pkg ->
+            runCatching {
+                dpm.setApplicationHidden(admin, pkg, blockPlay)
+                dpm.setPackagesSuspended(admin, arrayOf(pkg), blockPlay)
+            }.onFailure { Log.w(TAG, "Could not restrict $pkg: ${it.message}") }
         }
 
-        // Additional apps defined in the policy
+        otherStorePackages.forEach { pkg ->
+            runCatching {
+                dpm.setApplicationHidden(admin, pkg, blockAllStores)
+                dpm.setPackagesSuspended(admin, arrayOf(pkg), blockAllStores)
+            }.onFailure { Log.w(TAG, "Could not restrict $pkg: ${it.message}") }
+        }
+
         additionalBlockedApps.forEach { pkg ->
-            try {
+            runCatching {
                 dpm.setApplicationHidden(admin, pkg, true)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to hide additional app $pkg", e)
-            }
+                dpm.setPackagesSuspended(admin, arrayOf(pkg), true)
+            }.onFailure { Log.e(TAG, "Failed to restrict $pkg: ${it.message}") }
         }
     }
 
@@ -283,11 +317,13 @@ object TetherPolicyManager {
         val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
 
-        if (policy.webFilterMode != WebFilterMode.NONE) {
+        // VPN needed for DNS-level Play Store blocking OR web filter
+        val vpnNeeded = policy.hideGooglePlay || policy.webFilterMode != WebFilterMode.NONE
+
+        if (vpnNeeded) {
             context.startForegroundService(Intent(context, TetherVpnService::class.java))
             context.startForegroundService(Intent(context, TetherOverlayService::class.java))
 
-            // הגדרה כ-Always-on VPN (דורש Device Owner)
             try {
                 if (dpm.isDeviceOwnerApp(context.packageName)) {
                     dpm.setAlwaysOnVpnPackage(admin, context.packageName, true)

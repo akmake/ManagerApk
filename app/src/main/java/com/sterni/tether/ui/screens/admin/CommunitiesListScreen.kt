@@ -43,6 +43,15 @@ class CommunitiesViewModel(app: Application) : AndroidViewModel(app) {
             _loading.value = false
         }
     }
+
+    fun deleteCommunity(token: String, id: String) {
+        viewModelScope.launch {
+            try {
+                api.deleteCommunity(token, id)
+                _communities.value = _communities.value.filter { it.id != id }
+            } catch (_: Exception) {}
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,8 +66,27 @@ fun CommunitiesListScreen(
     val token = AdminSession.getToken(context) ?: ""
     val communities by vm.communities.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
+    var confirmDelete by remember { mutableStateOf<AdminCommunity?>(null) }
 
     LaunchedEffect(Unit) { vm.load(token) }
+
+    confirmDelete?.let { community ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            icon = { Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("מחק קהילה") },
+            text = { Text("למחוק את \"${community.name}\"? כל המכשירים יאבדו את ההגנה ולא ניתן לשחזר.") },
+            confirmButton = {
+                Button(
+                    onClick = { vm.deleteCommunity(token, community.id); confirmDelete = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("מחק") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { confirmDelete = null }) { Text("ביטול") }
+            }
+        )
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -102,7 +130,11 @@ fun CommunitiesListScreen(
         ) {
             item { Spacer(Modifier.height(4.dp)) }
             items(communities) { community ->
-                CommunityCard(community = community, onClick = { onCommunityClick(community.id) })
+                CommunityCard(
+                    community = community,
+                    onClick = { onCommunityClick(community.id) },
+                    onDelete = { confirmDelete = community }
+                )
             }
             item { Spacer(Modifier.height(80.dp)) }
         }
@@ -110,10 +142,10 @@ fun CommunitiesListScreen(
 }
 
 @Composable
-private fun CommunityCard(community: AdminCommunity, onClick: () -> Unit) {
+private fun CommunityCard(community: AdminCommunity, onClick: () -> Unit, onDelete: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -136,6 +168,10 @@ private fun CommunityCard(community: AdminCommunity, onClick: () -> Unit) {
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.DeleteOutline, "מחק",
+                    tint = MaterialTheme.colorScheme.error)
             }
             Icon(Icons.Default.ChevronLeft, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }

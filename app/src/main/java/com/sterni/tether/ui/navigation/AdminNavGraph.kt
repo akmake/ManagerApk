@@ -169,7 +169,10 @@ fun AdminNavGraph(
                     onShareClick = { code, name ->
                         navController.navigate(AdminScreen.ShareCode.route(code, name))
                     },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onDeleted = {
+                        navController.popBackStack()
+                    }
                 )
             }
 

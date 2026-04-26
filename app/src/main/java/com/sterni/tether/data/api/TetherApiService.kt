@@ -1,12 +1,16 @@
 package com.sterni.tether.data.api
 
 import com.sterni.tether.data.model.*
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Streaming
+
+data class AppVersionResponse(val versionCode: Int, val versionName: String)
 
 // ── Request / response payloads ──────────────────────────────────────────────
 
@@ -69,4 +73,11 @@ interface TetherApiService {
         @Path("deviceId") deviceId: String,
         @Body request: SecurityEventRequest
     ): Response<Any>
+
+    @GET("tether/app/version")
+    suspend fun getAppVersion(): Response<AppVersionResponse>
+
+    @Streaming
+    @GET("tether/app/download")
+    suspend fun downloadApk(): Response<ResponseBody>
 }
