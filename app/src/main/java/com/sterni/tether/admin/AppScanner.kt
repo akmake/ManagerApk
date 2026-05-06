@@ -17,7 +17,31 @@ object AppScanner {
             pm.getInstalledApplications(PackageManager.GET_META_DATA)
         }
 
-        packages.map { appInfo ->
+        val relevantPackages = packages.filter { appInfo ->
+            val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0 ||
+                    (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+            
+            if (!isSystem) return@filter true // אפליקציה שהמשתמש התקין - תמיד רלוונטי
+            
+            // אפליקציית מערכת - נדווח רק אם היא "מעניינת" (דפדפנים, חנויות, מדיה)
+            val pkg = appInfo.packageName.lowercase()
+            val isInteresting = pkg.contains("chrome") || 
+                               pkg.contains("browser") || 
+                               pkg.contains("vending") || // Play Store
+                               pkg.contains("youtube") || 
+                               pkg.contains("gallery") || 
+                               pkg.contains("camera") ||
+                               pkg.contains("video") ||
+                               pkg.contains("music") ||
+                               pkg.contains("facebook") ||
+                               pkg.contains("instagram") ||
+                               pkg.contains("whatsapp") ||
+                               pkg.contains("tiktok")
+            
+            isInteresting
+        }
+
+        relevantPackages.map { appInfo ->
             val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0 ||
                     (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
             val appName = appInfo.loadLabel(pm).toString()

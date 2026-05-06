@@ -92,7 +92,7 @@ class TetherOverlayService : Service() {
         }
 
         val icon = TextView(this).apply {
-            text = "🔒"
+            text = "נ”’"
             textSize = 40f
             gravity = Gravity.CENTER
         }

@@ -39,9 +39,9 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // ViewModel
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 class CommunityDetailViewModel(app: Application) : AndroidViewModel(app) {
     private val api = RetrofitClient.create(AdminApiService::class.java)
@@ -160,9 +160,9 @@ class CommunityDetailViewModel(app: Application) : AndroidViewModel(app) {
     fun clearSnackbar() { _snackbar.value = null }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // Main Screen
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -301,9 +301,9 @@ fun CommunityDetailScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // Devices Tab
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -458,7 +458,7 @@ private fun DeviceCard(
     ElevatedCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Column(Modifier.padding(16.dp)) {
 
-            // ── Header row ──
+            // ג”€ג”€ Header row ג”€ג”€
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     if (editingNickname) {
@@ -543,7 +543,7 @@ private fun DeviceCard(
 
             Spacer(Modifier.height(10.dp))
 
-            // ── Protection layer indicators ──
+            // ג”€ג”€ Protection layer indicators ג”€ג”€
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -582,7 +582,7 @@ private fun DeviceCard(
 
             HorizontalDivider(Modifier.padding(vertical = 10.dp))
 
-            // ── Action buttons ──
+            // ג”€ג”€ Action buttons ג”€ג”€
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -666,9 +666,9 @@ private fun ProtectionChip(label: String, active: Boolean, modifier: Modifier = 
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // Policy Tab
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun PolicyTab(
@@ -684,6 +684,17 @@ private fun PolicyTab(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item {
+                PolicySectionCard(title = "מצב חסימת אפליקציות", icon = Icons.Default.Security) {
+                    val mode = detectAppControlMode(edited)
+                    AppControlModeSelector(
+                        selected = mode,
+                        onSelect = { selectedMode ->
+                            edited = applyAppControlMode(edited, selectedMode)
+                        }
+                    )
+                }
+            }
 
             // ── Section 1: חסימות ──
             item {
@@ -818,7 +829,34 @@ private fun PolicyTab(
                     ) { edited = edited.copy(logsEnabled = it) }
 
                     Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Who can resolve approvals",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        ApprovalResolverMode.values().forEach { mode ->
+                            FilterChip(
+                                selected = edited.approvalResolverMode == mode,
+                                onClick = { edited = edited.copy(approvalResolverMode = mode) },
+                                label = {
+                                    Text(
+                                        when (mode) {
+                                            ApprovalResolverMode.OWNER_ONLY -> "Manager"
+                                            ApprovalResolverMode.SUPERADMIN_ONLY -> "Superadmin"
+                                            ApprovalResolverMode.OWNER_OR_SUPERADMIN -> "Both"
+                                        },
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            )
+                        }
+                    }
 
+                    Spacer(Modifier.height(8.dp))
                     var codeInput by remember(edited.adminEmergencyCode) {
                         mutableStateOf(edited.adminEmergencyCode ?: "")
                     }
@@ -839,7 +877,7 @@ private fun PolicyTab(
             }
         }
 
-        // ── Save button (floating at bottom) ──
+        // ג”€ג”€ Save button (floating at bottom) ג”€ג”€
         Box(
             Modifier
                 .fillMaxWidth()
@@ -868,9 +906,102 @@ private fun PolicyTab(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // Policy UI primitives
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+
+private enum class AppControlMode {
+    FULL_LOCKDOWN,
+    PLAY_VISIBLE_APPROVAL,
+    OPEN_INSTALLS
+}
+
+private fun detectAppControlMode(policy: CommunityPolicy): AppControlMode {
+    return when {
+        policy.hideGooglePlay && policy.blockAllStores && policy.blockInstallApps && policy.blockApkInstall ->
+            AppControlMode.FULL_LOCKDOWN
+        !policy.hideGooglePlay && !policy.blockAllStores && !policy.blockInstallApps && policy.blockApkInstall &&
+            policy.blockedActionBehavior == BlockedActionBehavior.REQUEST_APPROVAL ->
+            AppControlMode.PLAY_VISIBLE_APPROVAL
+        !policy.hideGooglePlay && !policy.blockAllStores && !policy.blockInstallApps && !policy.blockApkInstall ->
+            AppControlMode.OPEN_INSTALLS
+        else -> AppControlMode.PLAY_VISIBLE_APPROVAL
+    }
+}
+
+private fun applyAppControlMode(policy: CommunityPolicy, mode: AppControlMode): CommunityPolicy {
+    return when (mode) {
+        AppControlMode.FULL_LOCKDOWN -> policy.copy(
+            hideGooglePlay = true,
+            blockAllStores = true,
+            blockInstallApps = true,
+            blockApkInstall = true,
+            blockedActionBehavior = BlockedActionBehavior.SILENT
+        )
+        AppControlMode.PLAY_VISIBLE_APPROVAL -> policy.copy(
+            hideGooglePlay = false,
+            blockAllStores = false,
+            blockInstallApps = false,
+            blockApkInstall = true,
+            blockedActionBehavior = BlockedActionBehavior.REQUEST_APPROVAL
+        )
+        AppControlMode.OPEN_INSTALLS -> policy.copy(
+            hideGooglePlay = false,
+            blockAllStores = false,
+            blockInstallApps = false,
+            blockApkInstall = false
+        )
+    }
+}
+
+@Composable
+private fun AppControlModeSelector(
+    selected: AppControlMode,
+    onSelect: (AppControlMode) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        AppControlModeCard(
+            title = "חסימה מלאה",
+            description = "כל חנויות האפליקציות חסומות ומוסתרות",
+            selected = selected == AppControlMode.FULL_LOCKDOWN,
+            onClick = { onSelect(AppControlMode.FULL_LOCKDOWN) }
+        )
+        AppControlModeCard(
+            title = "Google Play פתוח + אישור מנהל",
+            description = "אפשר להיכנס לחנות, התקנה תחסם עד אישור מנהל",
+            selected = selected == AppControlMode.PLAY_VISIBLE_APPROVAL,
+            onClick = { onSelect(AppControlMode.PLAY_VISIBLE_APPROVAL) }
+        )
+        AppControlModeCard(
+            title = "פתוח",
+            description = "ללא חסימת התקנות אפליקציות",
+            selected = selected == AppControlMode.OPEN_INSTALLS,
+            onClick = { onSelect(AppControlMode.OPEN_INSTALLS) }
+        )
+    }
+}
+
+@Composable
+private fun AppControlModeCard(
+    title: String,
+    description: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    ElevatedCard(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
 
 @Composable
 private fun PolicySectionCard(
@@ -1198,9 +1329,9 @@ private fun AppTimeLocksSection(locks: List<AppTimeLock>, onChange: (List<AppTim
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // Share Tab
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun ShareTab(community: AdminCommunity?, onShare: (String, String) -> Unit) {

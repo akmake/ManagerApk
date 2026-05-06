@@ -13,6 +13,14 @@ data class AppTimeLock(
     val lockedUntilTs: Long? = null  // null = permanent block
 )
 
+data class ApprovedApp(
+    val packageName: String,
+    val appName: String,
+    val versionCode: Int,
+    val downloadUrl: String,
+    val iconUrl: String? = null
+)
+
 data class CommunityPolicy(
     val blockInstallApps: Boolean = true,
     val hideGooglePlay: Boolean = true,
@@ -26,7 +34,12 @@ data class CommunityPolicy(
     val blockedApps: List<String> = emptyList(),
     val appTimeLocks: List<AppTimeLock> = emptyList(),
     val blockedActionBehavior: BlockedActionBehavior = BlockedActionBehavior.SILENT,
+    val approvalResolverMode: ApprovalResolverMode = ApprovalResolverMode.OWNER_ONLY,
     val logsEnabled: Boolean = false,
+    val blockWhatsAppChannels: Boolean = false,
+    val supportWhatsApp: String? = null,
+    val supportEmail: String? = null,
+    val supportName: String? = "מנהל הקהילה",
     val webFilterMode: WebFilterMode = WebFilterMode.NONE,
     val allowedDomains: List<String> = emptyList(),
     val blockedDomains: List<String> = emptyList(),
@@ -42,10 +55,11 @@ data class InstalledAppInfo(
 
 data class ReportAppsRequest(
     val deviceId: String,
-    val apps: List<InstalledAppInfo>
+    val installedApps: List<InstalledAppInfo>
 )
 
 enum class BlockedActionBehavior { SILENT, SHOW_MESSAGE, REQUEST_APPROVAL }
+enum class ApprovalResolverMode { OWNER_ONLY, SUPERADMIN_ONLY, OWNER_OR_SUPERADMIN }
 
 enum class WebFilterMode { NONE, BLACKLIST, WHITELIST }
 
@@ -84,7 +98,7 @@ data class PolicyUpdateResponse(
 
 /** A command pushed from the admin dashboard to a specific device. */
 data class RemoteCommand(
-    val type: String,   // SHOW_MESSAGE | FORCE_SYNC
+    val type: String,   // SHOW_MESSAGE | FORCE_SYNC | RELEASE_ALL | APPROVAL_GRANTED
     val payload: String = ""
 )
 
@@ -95,5 +109,8 @@ data class ApprovalRequest(
     val action: String,
     val packageName: String?,
     val requestedAt: String,
-    val status: String
+    val status: String,
+    val resolvedByAdminId: String? = null,
+    val resolvedAt: String? = null,
+    val grantExpiresAt: Long? = null
 )

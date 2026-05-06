@@ -21,18 +21,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sterni.tether.BuildConfig
 import com.sterni.tether.admin.TetherPolicyManager
+import com.sterni.tether.admin.UninstallPinVerifier
+import com.sterni.tether.admin.UninstallVerificationResult
 import com.sterni.tether.ui.theme.HebrewFont
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onEmergencyClick: () -> Unit
+) {
     val context = LocalContext.current
-    val communityName = TetherPolicyManager.getCommunityName(context) ?: "—"
+    val scope = rememberCoroutineScope()
+    val communityName = TetherPolicyManager.getCommunityName(context) ?: "-"
     val isDeviceOwner = TetherPolicyManager.isDeviceOwner(context)
 
     var showUninstallDialog by remember { mutableStateOf(false) }
     var enteredCode by remember { mutableStateOf("") }
     var codeError by remember { mutableStateOf(false) }
+    var isVerifying by remember { mutableStateOf(false) }
+    var statusMessage by remember { mutableStateOf<String?>(null) }
 
     if (showUninstallDialog) {
         AlertDialog(
@@ -40,23 +49,28 @@ fun SettingsScreen(onBack: () -> Unit) {
                 showUninstallDialog = false
                 enteredCode = ""
                 codeError = false
+                isVerifying = false
             },
             title = { Text("אימות זהות", fontFamily = HebrewFont) },
             text = {
                 Column {
-                    Text("הזן קוד אישי להסרת ההגנות ומחיקת האפליקציה:", fontFamily = HebrewFont)
+                    Text("הזן קוד אישי לפתיחת חלון הסרה זמני:", fontFamily = HebrewFont)
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = enteredCode,
-                        onValueChange = { enteredCode = it; codeError = false },
+                        onValueChange = {
+                            enteredCode = it
+                            codeError = false
+                        },
                         label = { Text("קוד", fontFamily = HebrewFont) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         visualTransformation = PasswordVisualTransformation(),
                         isError = codeError,
                         supportingText = if (codeError) {
-                            { Text("קוד שגוי", fontFamily = HebrewFont, color = MaterialTheme.colorScheme.error) }
+                            { Text("קוד שגוי או הרשאה לא זמינה", fontFamily = HebrewFont, color = MaterialTheme.colorScheme.error) }
                         } else null,
                         singleLine = true,
+                        enabled = !isVerifying,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -64,16 +78,43 @@ fun SettingsScreen(onBack: () -> Unit) {
             confirmButton = {
                 Button(
                     onClick = {
-                        if (enteredCode == "11213") {
-                            showUninstallDialog = false
-                            TetherPolicyManager.releaseAllAndUninstall(context)
-                        } else {
-                            codeError = true
+                        scope.launch {
+                            isVerifying = true
+                            val result = UninstallPinVerifier.verifyAndOpenWindow(context, enteredCode)
+                            isVerifying = false
+                            when (result) {
+                                UninstallVerificationResult.Success -> {
+                                    showUninstallDialog = false
+                                    enteredCode = ""
+                                    codeError = false
+                                    statusMessage = "חלון הסרה נפתח לשעה. להסרה בפועל יש להיכנס להגדרות המכשיר."
+                                }
+                                UninstallVerificationResult.InvalidPin -> {
+                                    codeError = true
+                                }
+                                UninstallVerificationResult.NotEnrolled -> {
+                                    codeError = true
+                                    statusMessage = "המכשיר אינו מחובר לקהילה."
+                                }
+                                UninstallVerificationResult.NetworkError -> {
+                                    codeError = true
+                                    statusMessage = "שגיאת רשת. נדרש חיבור אינטרנט לאימות."
+                                }
+                            }
                         }
                     },
+                    enabled = enteredCode.isNotBlank() && !isVerifying,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("הסר הגנות ומחק", fontFamily = HebrewFont)
+                    if (isVerifying) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onError
+                        )
+                    } else {
+                        Text("פתח חלון הסרה", fontFamily = HebrewFont)
+                    }
                 }
             },
             dismissButton = {
@@ -81,10 +122,24 @@ fun SettingsScreen(onBack: () -> Unit) {
                     showUninstallDialog = false
                     enteredCode = ""
                     codeError = false
+                    isVerifying = false
                 }) {
                     Text("ביטול", fontFamily = HebrewFont)
                 }
             }
+        )
+    }
+
+    statusMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { statusMessage = null },
+            confirmButton = {
+                TextButton(onClick = { statusMessage = null }) {
+                    Text("אישור", fontFamily = HebrewFont)
+                }
+            },
+            title = { Text("עדכון", fontFamily = HebrewFont) },
+            text = { Text(message, fontFamily = HebrewFont) }
         )
     }
 
@@ -136,7 +191,13 @@ fun SettingsScreen(onBack: () -> Unit) {
             SettingsButton(
                 icon = Icons.Default.Mail,
                 label = "צור קשר עם המנהל",
-                onClick = { /* פתיחת מייל תמיכה */ }
+                onClick = { /* TODO */ }
+            )
+
+            SettingsButton(
+                icon = Icons.Default.Shield,
+                label = "שחרור בחירום",
+                onClick = onEmergencyClick
             )
 
             Spacer(Modifier.height(32.dp))
@@ -148,7 +209,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             ) {
                 Icon(Icons.Default.Warning, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("הורד הגנות ומחק אפליקציה", fontFamily = HebrewFont)
+                Text("פתיחת חלון הסרה", fontFamily = HebrewFont)
             }
         }
     }
@@ -208,3 +269,4 @@ private fun SettingsButton(
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 }
+

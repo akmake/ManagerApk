@@ -47,7 +47,7 @@ fun VpnPermissionScreen(onGranted: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("🌐", fontSize = 64.sp)
+        Text("נ", fontSize = 64.sp)
 
         Spacer(modifier = Modifier.height(24.dp))
 

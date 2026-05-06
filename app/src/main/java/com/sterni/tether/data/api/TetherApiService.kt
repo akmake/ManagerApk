@@ -80,4 +80,11 @@ interface TetherApiService {
     @Streaming
     @GET("tether/app/download")
     suspend fun downloadApk(): Response<ResponseBody>
+
+    @GET("tether/apps/approved")
+    suspend fun getApprovedApps(): Response<List<ApprovedApp>>
+
+    @Streaming
+    @GET
+    suspend fun downloadExternalApk(@retrofit2.http.Url url: String): Response<ResponseBody>
 }

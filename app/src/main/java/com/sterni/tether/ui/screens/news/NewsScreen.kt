@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -76,9 +77,9 @@ private fun timeAgo(dateStr: String?): String {
         val diff = (System.currentTimeMillis() - date.time) / 1000
         when {
             diff < 60    -> "עכשיו"
-            diff < 3600  -> "${diff / 60}ד׳"
-            diff < 86400 -> "${diff / 3600}ש׳"
-            else         -> "${diff / 86400}י׳"
+            diff < 3600  -> "${diff / 60} דק׳"
+            diff < 86400 -> "${diff / 3600} ש׳"
+            else         -> "${diff / 86400} י׳"
         }
     } catch (_: Exception) { "" }
 }
@@ -98,108 +99,137 @@ fun NewsScreen(
     Scaffold(
         containerColor      = PageBg,
         contentWindowInsets = WindowInsets(0.dp),
-        topBar = {
-            Column(Modifier.background(CardBg)) {
-                Spacer(Modifier.statusBarsPadding())
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // --- MODERN HEADER ---
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CardBg)
+                    .padding(horizontal = 24.dp, vertical = 20.dp)
+            ) {
                 Row(
-                    modifier              = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp)
-                        .padding(horizontal = 4.dp),
-                    verticalAlignment     = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(PageBg)
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "חזרה", tint = TetherInk, modifier = Modifier.size(20.dp))
                     }
-                    Text(
-                        text       = "חדשות",
-                        modifier   = Modifier.weight(1f),
-                        fontSize   = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = HebrewFont,
-                        color      = TetherInk
-                    )
+                    
                     if (state.lastUpdated != null) {
-                        val timeStr = remember(state.lastUpdated) {
-                            SimpleDateFormat("HH:mm", Locale.US).format(Date(state.lastUpdated!!))
-                        }
-                        Row(
-                            verticalAlignment     = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            modifier              = Modifier.padding(end = 4.dp)
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFFE8F5E9),
                         ) {
-                            Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF22C55E)))
-                            Text(timeStr, fontSize = 12.sp, fontFamily = HebrewFont, color = TetherMuted)
-                        }
-                    }
-                    IconButton(onClick = { vm.loadFeed() }, enabled = !state.loading) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "רענון",
-                            tint               = if (state.loading) TetherMuted.copy(alpha = 0.3f) else TetherInk,
-                            modifier           = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                HorizontalDivider(color = Divider, thickness = 0.5.dp)
-            }
-        }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when {
-                state.error != null && state.items.isEmpty() -> {
-                    Column(
-                        modifier            = Modifier.align(Alignment.Center).padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Icon(Icons.Default.CloudOff, contentDescription = null, tint = TetherMuted, modifier = Modifier.size(40.dp))
-                        Text(state.error ?: "", fontSize = 15.sp, fontFamily = HebrewFont, color = TetherMuted, textAlign = TextAlign.Center)
-                        Button(
-                            onClick = { vm.loadFeed() },
-                            colors  = ButtonDefaults.buttonColors(containerColor = TetherBlue),
-                            shape   = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("נסה שוב", fontFamily = HebrewFont, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-
-                state.loading && state.items.isEmpty() -> {
-                    LazyColumn(
-                        modifier            = Modifier.fillMaxSize(),
-                        contentPadding      = PaddingValues(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(5) { SkeletonCard() }
-                    }
-                }
-
-                else -> {
-                    LazyColumn(
-                        modifier            = Modifier.fillMaxSize(),
-                        contentPadding      = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(state.items, key = { it.id ?: it.hashCode() }) { item ->
-                            NewsFeedCard(
-                                item            = item,
-                                articleContent  = articleContents[item.link],
-                                articleLoading  = articleLoading.contains(item.link),
-                                articleError    = articleErrors.contains(item.link),
-                                onExpandArticle = { url -> vm.loadArticle(url) },
-                                onOpenLink      = { url ->
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                                }
-                            )
-                        }
-
-                        item {
-                            Box(
-                                modifier         = Modifier.fillMaxWidth().padding(vertical = 28.dp),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("· · ·", fontSize = 16.sp, color = Color(0xFFD1D5DB), letterSpacing = 6.sp)
+                                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF22C55E)))
+                                val timeStr = SimpleDateFormat("HH:mm", Locale.US).format(Date(state.lastUpdated!!))
+                                Text("עודכן ב-$timeStr", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                            }
+                        }
+                    }
+
+                    IconButton(
+                        onClick = { vm.loadFeed() },
+                        enabled = !state.loading,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(PageBg)
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "רענון", tint = TetherInk, modifier = Modifier.size(20.dp))
+                    }
+                }
+                
+                Spacer(Modifier.height(24.dp))
+                
+                Text(
+                    text = "עדכוני היום",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Black,
+                    fontFamily = HebrewFont,
+                    color = TetherInk
+                )
+                Text(
+                    text = "כל החדשות והעדכונים מהערוצים הנבחרים",
+                    fontSize = 14.sp,
+                    color = TetherMuted,
+                    fontFamily = HebrewFont
+                )
+            }
+
+            Box(modifier = Modifier.weight(1f)) {
+                when {
+                    state.loading && state.items.isEmpty() -> {
+                        LazyColumn(
+                            modifier            = Modifier.fillMaxSize(),
+                            contentPadding      = PaddingValues(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(5) { SkeletonCard() }
+                        }
+                    }
+
+                    state.error != null && state.items.isEmpty() -> {
+                        Column(
+                            modifier            = Modifier.align(Alignment.Center).padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Icon(Icons.Default.CloudOff, contentDescription = null, tint = TetherMuted, modifier = Modifier.size(40.dp))
+                            Text(state.error ?: "", fontSize = 15.sp, fontFamily = HebrewFont, color = TetherMuted, textAlign = TextAlign.Center)
+                            Button(
+                                onClick = { vm.loadFeed() },
+                                colors  = ButtonDefaults.buttonColors(containerColor = TetherBlue),
+                                shape   = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("נסה שוב", fontFamily = HebrewFont, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            modifier            = Modifier.fillMaxSize(),
+                            contentPadding      = PaddingValues(horizontal = 24.dp, vertical = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            // --- ADMIN SUPPORT & MESSAGES (Pinned) ---
+                            item {
+                                AdminSupportCard()
+                            }
+
+                            items(state.items, key = { it.id ?: it.hashCode() }) { item ->
+                                NewsFeedCard(
+                                    item            = item,
+                                    articleContent  = articleContents[item.link],
+                                    articleLoading  = articleLoading.contains(item.link),
+                                    articleError    = articleErrors.contains(item.link),
+                                    onExpandArticle = { url -> vm.loadArticle(url) },
+                                    onOpenLink      = { url ->
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                    }
+                                )
+                            }
+
+                            item {
+                                Box(
+                                    modifier         = Modifier.fillMaxWidth().padding(vertical = 28.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("· · ·", fontSize = 16.sp, color = Color(0xFFD1D5DB), letterSpacing = 6.sp)
+                                }
                             }
                         }
                     }
@@ -209,7 +239,7 @@ fun NewsScreen(
     }
 }
 
-// ── Feed Card ─────────────────────────────────────────────────────────────────
+// ג”€ג”€ Feed Card ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun NewsFeedCard(
@@ -223,264 +253,124 @@ private fun NewsFeedCard(
     val sourceKey = if (item.source == "rotter") "rotter" else item.channel ?: ""
     val colors    = ChannelColors[sourceKey] ?: (Color(0xFF94A3B8) to Color(0xFF64748B))
     val label     = ChannelLabels[sourceKey] ?: sourceKey
-    val isRecent  = try {
-        val formats = listOf(
-            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US),
-            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US),
-            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US)
-        )
-        formats.forEach { it.timeZone = TimeZone.getTimeZone("UTC") }
-        val date = formats.firstNotNullOfOrNull { fmt ->
-            try { fmt.parse(item.date ?: "") } catch (_: Exception) { null }
-        }
-        date != null && (System.currentTimeMillis() - date.time) < 1800_000
-    } catch (_: Exception) { false }
-
     var expanded by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(CardBg)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = CardBg,
+        shadowElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-
-            // ── Meta ──────────────────────────────────────────────────────────
-            Row(
-                modifier          = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            // Header
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier         = Modifier
+                    modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
                         .background(Brush.linearGradient(listOf(colors.first, colors.second))),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text       = label.firstOrNull()?.toString() ?: "",
-                        fontSize   = 15.sp,
-                        fontWeight = FontWeight.Black,
-                        color      = Color.White
-                    )
+                    Text(label.take(1), color = Color.White, fontWeight = FontWeight.Black)
                 }
-
-                Spacer(Modifier.width(10.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = HebrewFont, color = TetherInk)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        if (isRecent) Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(Color(0xFF22C55E)))
-                        Text(
-                            text       = timeAgo(item.date),
-                            fontSize   = 11.sp,
-                            fontFamily = HebrewFont,
-                            color      = if (isRecent) Color(0xFF16A34A) else TetherMuted
-                        )
-                    }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TetherInk)
+                    Text(timeAgo(item.date), style = MaterialTheme.typography.labelSmall, color = TetherMuted)
                 }
-
-                if (item.link != null) {
-                    IconButton(onClick = { onOpenLink(item.link!!) }, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Default.OpenInNew, contentDescription = null, tint = TetherMuted.copy(alpha = 0.4f), modifier = Modifier.size(15.dp))
-                    }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { onOpenLink(item.link ?: "") }) {
+                    Icon(Icons.Default.OpenInNew, contentDescription = null, tint = TetherMuted, modifier = Modifier.size(20.dp))
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // ── Forwarded from ────────────────────────────────────────────────
-            if (item.forwardedFrom != null) {
-                Row(
-                    modifier                  = Modifier.padding(bottom = 8.dp),
-                    verticalAlignment         = Alignment.CenterVertically,
-                    horizontalArrangement     = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(Icons.Default.Reply, contentDescription = null, tint = TetherMuted.copy(0.4f), modifier = Modifier.size(12.dp))
-                    Text("הועבר מ ${item.forwardedFrom?.name ?: ""}", fontSize = 11.sp, fontFamily = HebrewFont, color = TetherMuted.copy(alpha = 0.6f))
-                }
+            // Content
+            if (!item.title.isNullOrBlank()) {
+                Text(
+                    text = item.title!!,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold, lineHeight = 28.sp),
+                    color = TetherInk,
+                    fontFamily = HebrewFont
+                )
+                Spacer(Modifier.height(8.dp))
             }
 
-            // ── Reply quote ───────────────────────────────────────────────────
-            if (item.replyText != null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 10.dp)
-                        .clip(RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp))
-                        .background(Color(0xFFF8F8F8))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(3.dp)
-                            .defaultMinSize(minHeight = 36.dp)
-                            .height(IntrinsicSize.Min)
-                            .background(Brush.verticalGradient(listOf(colors.first, colors.second)))
-                    )
-                    Text(
-                        text       = item.replyText ?: "",
-                        modifier   = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                        fontSize   = 13.sp,
-                        fontFamily = HebrewFont,
-                        color      = TetherMuted,
-                        maxLines   = 2,
-                        overflow   = TextOverflow.Ellipsis,
-                        lineHeight = 19.sp,
-                        style      = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)
-                    )
-                }
-            }
-
-            // ── Text ──────────────────────────────────────────────────────────
             if (!item.text.isNullOrBlank()) {
                 Text(
-                    text       = item.text!!,
-                    fontSize   = 15.sp,
-                    fontFamily = HebrewFont,
-                    color      = TetherInk,
-                    lineHeight = 24.sp,
-                    style      = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl),
-                    modifier   = Modifier.padding(bottom = if (item.image != null || item.video != null) 10.dp else 0.dp)
+                    text = item.text!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TetherInk.copy(alpha = 0.8f),
+                    lineHeight = 22.sp,
+                    maxLines = if (expanded) Int.MAX_VALUE else 4,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-        }
 
-        // ── Image (full-width, clipped to card bottom corners if last element) ──
-        if (item.image != null && item.video == null) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(item.image)
-                    .addHeader("Referer", "https://t.me/")
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale       = ContentScale.Crop,
-                modifier           = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 300.dp)
-                    .background(Color(0xFFF1F5F9))
-            )
-        }
-
-        // ── Video ─────────────────────────────────────────────────────────────
-        if (item.video != null) {
-            var playing by remember { mutableStateOf(false) }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 260.dp)
-                    .background(Color.Black)
-            ) {
-                if (playing) {
-                    AndroidView(
-                        factory = { ctx ->
-                            VideoView(ctx).apply {
-                                setVideoURI(Uri.parse(item.video))
-                                val mc = MediaController(ctx)
-                                mc.setAnchorView(this)
-                                setMediaController(mc)
-                                requestFocus()
-                                start()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
-                    if (item.videoThumb != null) {
+            // Media
+            if (item.image != null || item.video != null) {
+                Spacer(Modifier.height(16.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp))) {
+                    if (item.image != null && item.video == null) {
                         AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(item.videoThumb)
-                                .addHeader("Referer", "https://t.me/")
-                                .crossfade(true)
-                                .build(),
+                            model = ImageRequest.Builder(LocalContext.current).data(item.image).addHeader("Referer", "https://t.me/").crossfade(true).build(),
                             contentDescription = null,
-                            contentScale       = ContentScale.Crop,
-                            modifier           = Modifier.fillMaxWidth()
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
                         )
-                    }
-                    Box(
-                        modifier         = Modifier
-                            .align(Alignment.Center)
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.45f))
-                            .clickable { playing = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "נגן", tint = Color.White, modifier = Modifier.size(30.dp))
+                    } else if (item.video != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current).data(item.videoThumb).addHeader("Referer", "https://t.me/").crossfade(true).build(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        Box(
+                            modifier = Modifier.align(Alignment.Center).size(48.dp).clip(CircleShape).background(Color.Black.copy(0.5f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
+                        }
                     }
                 }
             }
-        }
 
-        // ── Title + expand (Rotter) ───────────────────────────────────────────
-        if (item.title != null) {
-            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = if (item.image != null || item.video != null) 12.dp else 0.dp)) {
-                if (item.image != null || item.video != null) Spacer(Modifier.height(0.dp))
-                Row(
-                    modifier          = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable {
-                            expanded = !expanded
-                            if (expanded && item.link != null && articleContent == null) onExpandArticle(item.link!!)
-                        },
-                    verticalAlignment = Alignment.Top
+            Spacer(Modifier.height(20.dp))
+
+            // Expand Action
+            if (item.link != null) {
+                Button(
+                    onClick = { 
+                        expanded = !expanded
+                        if (expanded && articleContent == null) onExpandArticle(item.link!!)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PageBg)
                 ) {
-                    Text(
-                        text       = item.title!!,
-                        modifier   = Modifier.weight(1f),
-                        fontSize   = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        fontFamily = HebrewFont,
-                        color      = TetherInk,
-                        lineHeight = 23.sp,
-                        style      = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Icon(
-                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = null,
-                        tint     = TetherMuted.copy(alpha = 0.4f),
-                        modifier = Modifier.size(20.dp).padding(top = 2.dp)
-                    )
+                    if (articleLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = TetherInk)
+                    } else {
+                        Text(if (expanded) "סגור" else "קרא עוד", color = TetherInk, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Article Content
+            AnimatedVisibility(visible = expanded && articleContent != null) {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider(color = Divider)
+                    Spacer(Modifier.height(16.dp))
+                    ArticleContentView(content = articleContent!!, articleUrl = item.link, onOpenLink = onOpenLink)
                 }
             }
         }
-
-        // ── Expanded article ──────────────────────────────────────────────────
-        AnimatedVisibility(visible = expanded && item.source == "rotter") {
-            Column(modifier = Modifier.padding(horizontal = 14.dp).padding(top = 12.dp, bottom = 14.dp)) {
-                HorizontalDivider(color = Divider, thickness = 0.5.dp, modifier = Modifier.padding(bottom = 14.dp))
-                when {
-                    articleLoading -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        listOf(1f, 0.88f, 0.65f).forEach { w ->
-                            Box(modifier = Modifier.fillMaxWidth(w).height(13.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF4F4F5)))
-                        }
-                    }
-                    articleError -> Column(
-                        modifier            = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFFFF1F2)).padding(14.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text("שגיאה בטעינת הכתבה", fontSize = 13.sp, fontFamily = HebrewFont, color = Color(0xFFDC2626))
-                        if (item.link != null) {
-                            Text("פתח במקור ↗", fontSize = 12.sp, fontFamily = HebrewFont, color = Color(0xFFEF4444),
-                                modifier = Modifier.clickable { onOpenLink(item.link!!) })
-                        }
-                    }
-                    articleContent != null -> ArticleContentView(content = articleContent, articleUrl = item.link, onOpenLink = onOpenLink)
-                }
-            }
-        }
-
-        // Bottom padding when no extra content
-        if (item.title == null && item.image == null && item.video == null) Spacer(Modifier.height(14.dp))
     }
 }
 
-// ── Article Content ───────────────────────────────────────────────────────────
+// ג”€ג”€ Article Content ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun ArticleContentView(
@@ -574,7 +464,123 @@ private fun ArticleContentView(
     }
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
+// ג”€ג”€ Skeleton ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+
+// ג”€ג”€ Support Card ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+
+@Composable
+private fun AdminSupportCard() {
+    val context = LocalContext.current
+    val policy = remember { com.sterni.tether.admin.TetherPolicyManager.loadPolicy(context) }
+    
+    // אם אין פרטי קשר, נציג כרטיס ברירת מחדל יפה להודעות מנהל
+    val hasSupport = policy?.supportWhatsApp != null || policy?.supportEmail != null
+    val adminMsg = "ברוכים הבאים ל-DailyStudy. המנהל זמין כאן לכל שאלה."
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
+        shadowElevation = 4.dp
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.VerifiedUser, 
+                            contentDescription = null, 
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = policy?.supportName ?: "מנהל הקהילה",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "סטטוס: מחובר להגנה",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            
+            Spacer(Modifier.height(20.dp))
+            
+            Text(
+                text = adminMsg,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                lineHeight = 22.sp
+            )
+            
+            if (hasSupport) {
+                Spacer(Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    policy?.supportWhatsApp?.let { phone ->
+                        PremiumSupportButton(
+                            modifier = Modifier.weight(1f),
+                            label = "WhatsApp",
+                            icon = Icons.Default.Chat,
+                            containerColor = Color(0xFF25D366),
+                            onClick = {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$phone")))
+                            }
+                        )
+                    }
+                    
+                    policy?.supportEmail?.let { email ->
+                        PremiumSupportButton(
+                            modifier = Modifier.weight(1f),
+                            label = "אימייל",
+                            icon = Icons.Default.Email,
+                            containerColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$email"))
+                                context.startActivity(intent)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PremiumSupportButton(
+    modifier: Modifier,
+    label: String,
+    icon: ImageVector,
+    containerColor: Color,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = containerColor)
+    ) {
+        Icon(icon, null, modifier = Modifier.size(20.dp), tint = Color.White)
+        Spacer(Modifier.width(12.dp))
+        Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+    }
+}
 
 @Composable
 private fun SkeletonCard() {

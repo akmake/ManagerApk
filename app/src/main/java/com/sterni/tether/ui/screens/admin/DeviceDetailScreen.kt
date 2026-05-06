@@ -7,6 +7,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
@@ -27,19 +29,21 @@ import com.sterni.tether.admin.AdminSession
 import com.sterni.tether.data.api.AdminApiService
 import com.sterni.tether.data.api.RetrofitClient
 import com.sterni.tether.data.model.AppTimeLock
+import com.sterni.tether.data.model.BlockedActionBehavior
 import com.sterni.tether.data.model.DeviceDetail
 import com.sterni.tether.data.model.DevicePolicy
 import com.sterni.tether.data.model.InstalledApp
 import com.sterni.tether.data.model.SecurityEvent
+import com.sterni.tether.data.model.WebFilterMode
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // ViewModel
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 class DeviceDetailViewModel(app: Application) : AndroidViewModel(app) {
     private val api = RetrofitClient.create(AdminApiService::class.java)
@@ -70,10 +74,22 @@ class DeviceDetailViewModel(app: Application) : AndroidViewModel(app) {
             if (isRefresh) _refreshing.value = true else _loading.value = true
             try {
                 val deviceRes = api.getDeviceDetail(token, deviceId)
-                if (deviceRes.isSuccessful) _device.value = deviceRes.body()
+                if (deviceRes.isSuccessful) {
+                    val deviceData = deviceRes.body()
+                    _device.value = deviceData
+                    android.util.Log.d("DeviceDetail", "Loaded device: ${deviceData?.deviceModel}, Apps: ${deviceData?.installedApps?.size}")
+                    deviceData?.installedApps?.forEach { 
+                         android.util.Log.d("DeviceDetail", "App: ${it.appName} (${it.packageName}) isSystem: ${it.isSystemApp}")
+                    }
+                } else {
+                    android.util.Log.e("DeviceDetail", "Error loading device: ${deviceRes.code()} ${deviceRes.errorBody()?.string()}")
+                }
+                
                 val eventsRes = api.getDeviceEvents(token, deviceId)
                 if (eventsRes.isSuccessful) _events.value = eventsRes.body()?.events ?: emptyList()
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.e("DeviceDetail", "Exception loading device", e)
+            }
             _loading.value = false
             _refreshing.value = false
         }
@@ -140,9 +156,9 @@ class DeviceDetailViewModel(app: Application) : AndroidViewModel(app) {
     fun clearSnackbar() { _snackbar.value = null }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // Screen
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -293,7 +309,7 @@ fun DeviceDetailScreen(
             modifier = Modifier.fillMaxSize().padding(padding)
         ) {
         Column(Modifier.fillMaxSize()) {
-            // ── Status header ──
+            // ג”€ג”€ Status header ג”€ג”€
             DeviceStatusHeader(d, onSync = { vm.sendCommand(token, deviceId, "FORCE_SYNC") },
                 onMessage = { showMessageDialog = true },
                 onRelease = { confirmRelease = true },
@@ -304,7 +320,7 @@ fun DeviceDetailScreen(
                     else vm.toggleAllowUninstall(token, deviceId, false)
                 })
 
-            // ── Tabs ──
+            // ג”€ג”€ Tabs ג”€ג”€
             val tabs = listOf("אפליקציות", "הגדרות אישיות", "אירועים")
             PrimaryTabRow(selectedTabIndex = selectedTab) {
                 tabs.forEachIndexed { i, title ->
@@ -351,9 +367,9 @@ fun DeviceDetailScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // Shared UI helpers (local copies — ProtectionChip is private in its origin file)
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun ProtectionChip(label: String, active: Boolean, modifier: Modifier = Modifier) {
@@ -378,9 +394,9 @@ private fun ProtectionChip(label: String, active: Boolean, modifier: Modifier = 
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // Status header
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun DeviceStatusHeader(
@@ -439,9 +455,9 @@ private fun DeviceStatusHeader(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // Apps Tab
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun AppsTab(
@@ -450,12 +466,13 @@ private fun AppsTab(
     allowedByDevice: List<String>,
     onToggleBlock: (String, Boolean) -> Unit
 ) {
-    val nonSystemApps = remember(apps) { apps.filter { !it.isSystemApp } }
+    // זמנית מציגים הכל כדי להבין מה קורה
+    val displayedApps = remember(apps) { apps.sortedBy { it.appName.lowercase() } }
     var searchQuery by remember { mutableStateOf("") }
 
-    val filtered = remember(nonSystemApps, searchQuery) {
-        if (searchQuery.isBlank()) nonSystemApps
-        else nonSystemApps.filter {
+    val filtered = remember(displayedApps, searchQuery) {
+        if (searchQuery.isBlank()) displayedApps
+        else displayedApps.filter {
             it.appName.contains(searchQuery, ignoreCase = true) ||
             it.packageName.contains(searchQuery, ignoreCase = true)
         }
@@ -475,13 +492,13 @@ private fun AppsTab(
             }
         )
 
-        if (nonSystemApps.isEmpty()) {
+        if (apps.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Outlined.Apps, null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(8.dp))
-                    Text("אין נתוני אפליקציות", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("האפליקציה תדווח בסנכרון הבא", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("אין נתוני אפליקציות ברשימה שהגיעה מהשרת", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("נא לבצע סנכרון במכשיר היעד", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             return
@@ -539,9 +556,9 @@ private fun AppRow(app: InstalledApp, isBlocked: Boolean, onToggleBlock: (Boolea
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 // Device Policy Tab (per-device overrides)
-// ─────────────────────────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun DevicePolicyTab(
@@ -557,12 +574,19 @@ private fun DevicePolicyTab(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Info, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
                         Spacer(Modifier.width(8.dp))
-                        Text("הגדרות כאן מחליפות את מדיניות הקהילה למכשיר זה בלבד. הגדרה ריקה = ירש מהקהילה.",
-                            fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
+                        Text(
+                            "הגדרות כאן מחליפות את מדיניות הקהילה למכשיר הזה בלבד. ירושה = שימוש בהגדרת קהילה.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
                     }
                 }
             }
@@ -573,7 +597,7 @@ private fun DevicePolicyTab(
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
                             Icon(Icons.Default.Block, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("חסימות אישיות", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                            Text("חסימות למכשיר", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         }
                         HorizontalDivider(Modifier.padding(bottom = 12.dp))
 
@@ -586,9 +610,91 @@ private fun DevicePolicyTab(
                         NullablePolicyRow("חסום כל החנויות", edited.blockAllStores) {
                             edited = edited.copy(blockAllStores = it)
                         }
-                        NullablePolicyRow("חסום התקנת APK ידנית", edited.blockApkInstall) {
+                        NullablePolicyRow("חסום התקנת APK", edited.blockApkInstall) {
                             edited = edited.copy(blockApkInstall = it)
                         }
+                        NullablePolicyRow("חסום Safe Boot", edited.blockSafeBoot) {
+                            edited = edited.copy(blockSafeBoot = it)
+                        }
+                        NullablePolicyRow("חסום Factory Reset", edited.blockFactoryReset) {
+                            edited = edited.copy(blockFactoryReset = it)
+                        }
+                        NullablePolicyRow("חסום USB Transfer", edited.blockUsbTransfer) {
+                            edited = edited.copy(blockUsbTransfer = it)
+                        }
+                        NullablePolicyRow("איסוף לוגים", edited.logsEnabled) {
+                            edited = edited.copy(logsEnabled = it)
+                        }
+                        NullablePolicyRow("חסום ערוצי WhatsApp", edited.blockWhatsAppChannels) {
+                            edited = edited.copy(blockWhatsAppChannels = it)
+                        }
+                    }
+                }
+            }
+
+            item {
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 2.dp)) {
+                            Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("התנהגות ופרטי ניהול", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        }
+                        HorizontalDivider(Modifier.padding(bottom = 6.dp))
+
+                        Text("Blocked action behavior", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        NullableEnumChipRow(
+                            current = edited.blockedActionBehavior,
+                            options = listOf(
+                                "ירושה" to null,
+                                "SILENT" to BlockedActionBehavior.SILENT,
+                                "MESSAGE" to BlockedActionBehavior.SHOW_MESSAGE,
+                                "APPROVAL" to BlockedActionBehavior.REQUEST_APPROVAL
+                            ),
+                            onSelect = { edited = edited.copy(blockedActionBehavior = it) }
+                        )
+
+                        OutlinedTextField(
+                            value = edited.maxInstalledApps?.toString() ?: "",
+                            onValueChange = { value ->
+                                edited = edited.copy(maxInstalledApps = value.toIntOrNull())
+                            },
+                            label = { Text("Max installed apps (ריק = ירושה)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = edited.adminEmergencyCode ?: "",
+                            onValueChange = { edited = edited.copy(adminEmergencyCode = it.ifBlank { null }) },
+                            label = { Text("קוד חירום למכשיר (ריק = ירושה)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = edited.supportName ?: "",
+                            onValueChange = { edited = edited.copy(supportName = it.ifBlank { null }) },
+                            label = { Text("שם תמיכה (ריק = ירושה)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = edited.supportWhatsApp ?: "",
+                            onValueChange = { edited = edited.copy(supportWhatsApp = it.ifBlank { null }) },
+                            label = { Text("WhatsApp תמיכה (ריק = ירושה)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = edited.supportEmail ?: "",
+                            onValueChange = { edited = edited.copy(supportEmail = it.ifBlank { null }) },
+                            label = { Text("אימייל תמיכה (ריק = ירושה)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
@@ -619,11 +725,56 @@ private fun DevicePolicyTab(
 
             item {
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 2.dp)) {
+                            Icon(Icons.Default.Language, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("סינון רשת", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        }
+                        HorizontalDivider(Modifier.padding(bottom = 6.dp))
+
+                        NullableEnumChipRow(
+                            current = edited.webFilterMode,
+                            options = listOf(
+                                "ירושה" to null,
+                                "NONE" to WebFilterMode.NONE,
+                                "BLACKLIST" to WebFilterMode.BLACKLIST,
+                                "WHITELIST" to WebFilterMode.WHITELIST
+                            ),
+                            onSelect = { mode ->
+                                edited = edited.copy(
+                                    webFilterMode = mode,
+                                    blockedDomains = if (mode == WebFilterMode.BLACKLIST) edited.blockedDomains else null,
+                                    allowedDomains = if (mode == WebFilterMode.WHITELIST) edited.allowedDomains else null
+                                )
+                            }
+                        )
+
+                        AnimatedVisibility(edited.webFilterMode == WebFilterMode.BLACKLIST) {
+                            DomainListSection(
+                                title = "דומיינים חסומים",
+                                domains = edited.blockedDomains ?: emptyList(),
+                                onChange = { edited = edited.copy(blockedDomains = it) }
+                            )
+                        }
+                        AnimatedVisibility(edited.webFilterMode == WebFilterMode.WHITELIST) {
+                            DomainListSection(
+                                title = "דומיינים מותרים",
+                                domains = edited.allowedDomains ?: emptyList(),
+                                onChange = { edited = edited.copy(allowedDomains = it) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
                             Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("נעילת זמן", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                            Text("נעילות זמן", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         }
                         HorizontalDivider(Modifier.padding(bottom = 12.dp))
                         DeviceTimeLockSection(
@@ -640,11 +791,28 @@ private fun DevicePolicyTab(
             }
         }
 
-        Box(Modifier.fillMaxWidth().align(Alignment.BottomCenter)
-            .padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Button(onClick = { onSave(edited) }, modifier = Modifier.fillMaxWidth().height(52.dp), enabled = !saving) {
-                if (saving) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                else { Icon(Icons.Default.Save, null); Spacer(Modifier.width(8.dp)); Text("שמור הגדרות מכשיר", fontSize = 16.sp) }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Button(
+                onClick = { onSave(edited) },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                enabled = !saving
+            ) {
+                if (saving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(Icons.Default.Save, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("שמור הגדרות מכשיר", fontSize = 16.sp)
+                }
             }
         }
     }
@@ -654,15 +822,14 @@ private fun DevicePolicyTab(
 private fun NullablePolicyRow(label: String, value: Boolean?, onChange: (Boolean?) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        // 3-state: null=inherit, true=on, false=off
         val options = listOf(null, true, false)
-        val labels = listOf("ירש", "כן", "לא")
+        val labels = listOf("ירושה", "כן", "לא")
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            options.forEachIndexed { i, opt ->
+            options.forEachIndexed { index, option ->
                 FilterChip(
-                    selected = value == opt,
-                    onClick = { onChange(opt) },
-                    label = { Text(labels[i], fontSize = 11.sp) },
+                    selected = value == option,
+                    onClick = { onChange(option) },
+                    label = { Text(labels[index], fontSize = 11.sp) },
                     modifier = Modifier.height(28.dp)
                 )
             }
@@ -670,9 +837,58 @@ private fun NullablePolicyRow(label: String, value: Boolean?, onChange: (Boolean
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Security Events Tab
-// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun <T> NullableEnumChipRow(
+    current: T?,
+    options: List<Pair<String, T?>>,
+    onSelect: (T?) -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+        options.forEach { (label, option) ->
+            FilterChip(
+                selected = current == option,
+                onClick = { onSelect(option) },
+                label = { Text(label, fontSize = 11.sp) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DomainListSection(title: String, domains: List<String>, onChange: (List<String>) -> Unit) {
+    var input by remember { mutableStateOf("") }
+    Column {
+        Text(title, fontWeight = FontWeight.Medium, fontSize = 13.sp, color = MaterialTheme.colorScheme.secondary)
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                placeholder = { Text("youtube.com", fontSize = 12.sp) },
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            FilledTonalIconButton(onClick = {
+                val domain = input.trim().lowercase()
+                if (domain.isNotEmpty() && domain !in domains) {
+                    onChange(domains + domain)
+                    input = ""
+                }
+            }) { Icon(Icons.Default.Add, null) }
+        }
+        domains.forEach { domain ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Language, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(6.dp))
+                Text(domain, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                IconButton(onClick = { onChange(domains - domain) }, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun SecurityEventsTab(events: List<SecurityEvent>) {
@@ -854,3 +1070,4 @@ private fun SimpleAppListSection(title: String, apps: List<String>, onChange: (L
         }
     }
 }
+

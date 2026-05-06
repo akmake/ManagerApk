@@ -21,6 +21,7 @@ import com.sterni.tether.ui.screens.join.isAccessibilityEnabled
 import com.sterni.tether.ui.screens.news.NewsScreen
 import com.sterni.tether.ui.screens.onboarding.OnboardingScreen
 import com.sterni.tether.ui.screens.settings.SettingsScreen
+import com.sterni.tether.ui.screens.store.StoreScreen
 import com.sterni.tether.ui.screens.splash.SplashScreen
 
 sealed class Screen(val route: String) {
@@ -40,9 +41,11 @@ sealed class Screen(val route: String) {
         fun createRoute(name: String) = "enrollment_success/${encode(name)}"
     }
     object Home     : Screen("home")
+    object Store    : Screen("store")
     object Calendar : Screen("calendar")
     object News     : Screen("news")
     object Settings : Screen("settings")
+    object Emergency: Screen("emergency")
 }
 
 private fun encode(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
@@ -165,8 +168,13 @@ fun NavGraph(
                 onCalendarClick  = { navController.navigate(Screen.Calendar.route) },
                 onNewsClick      = { navController.navigate(Screen.News.route) },
                 onSettingsClick  = { navController.navigate(Screen.Settings.route) },
+                onStoreClick     = { navController.navigate(Screen.Store.route) },
                 onEnterAdmin     = onEnterAdmin
             )
+        }
+
+        composable(Screen.Store.route) {
+            StoreScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.Calendar.route) {
@@ -178,7 +186,14 @@ fun NavGraph(
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onEmergencyClick = { navController.navigate(Screen.Emergency.route) }
+            )
+        }
+
+        composable(Screen.Emergency.route) {
+            com.sterni.tether.ui.screens.emergency.EmergencyCodeScreen(onBack = { navController.popBackStack() })
         }
     }
 }

@@ -36,6 +36,7 @@ sealed class AdminScreen(val route: String) {
             "admin_share/${encode(code)}/${encode(name)}"
     }
     object ManageAdmins   : AdminScreen("admin_manage_admins")
+    object ApprovedAppsCatalog : AdminScreen("admin_approved_apps_catalog")
     object Provisioning   : AdminScreen("admin_provisioning")
     object GlobalOverview : AdminScreen("admin_global_overview")
     object DeviceDetail  : AdminScreen("admin_device/{deviceId}") {
@@ -139,6 +140,9 @@ fun AdminNavGraph(
                     onGlobalOverviewClick = {
                         navController.navigate(AdminScreen.GlobalOverview.route)
                     },
+                    onApprovedAppsClick = {
+                        navController.navigate(AdminScreen.ApprovedAppsCatalog.route)
+                    },
                     onLogout = onExit
                 )
             }
@@ -229,6 +233,10 @@ fun AdminNavGraph(
 
             composable(AdminScreen.GlobalOverview.route) {
                 GlobalOverviewScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(AdminScreen.ApprovedAppsCatalog.route) {
+                ApprovedAppsCatalogScreen(onBack = { navController.popBackStack() })
             }
         }
     }

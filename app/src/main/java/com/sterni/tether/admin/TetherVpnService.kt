@@ -34,6 +34,18 @@ class TetherVpnService : VpnService() {
             "com.google.android.finsky", // Play Store backend
             "com.google.android.gsf"     // Google Services Framework (push / FCM trigger)
         )
+        // Never block control-plane domains so policy sync/admin flows keep working.
+        val ESSENTIAL_ALLOWED_DOMAINS = listOf(
+            "dahanswebsite.com",
+            "www.dahanswebsite.com"
+        )
+        // Try multiple public resolvers to avoid total DNS outage on networks that block one.
+        val DNS_UPSTREAMS = listOf(
+            "8.8.8.8",
+            "1.1.1.1",
+            "9.9.9.9",
+            "8.8.4.4"
+        )
 
         @Volatile
         var isRunning = false
@@ -43,8 +55,8 @@ class TetherVpnService : VpnService() {
     private var vpnOutput: FileOutputStream? = null
     @Volatile private var running = false
 
-    // true  → addAllowedApplication mode: ONLY Play Store traffic enters the VPN, everything dropped
-    // false → DNS-only mode: only 10.0.0.1:53 enters the VPN, TCP bypasses entirely
+    // true  ג†’ addAllowedApplication mode: ONLY Play Store traffic enters the VPN, everything dropped
+    // false ג†’ DNS-only mode: only 10.0.0.1:53 enters the VPN, TCP bypasses entirely
     @Volatile private var playStoreKillMode = false
 
     // ניהול תהליכי רקע מודרני (Coroutines)
@@ -96,7 +108,7 @@ class TetherVpnService : VpnService() {
             Log.i(TAG, "VPN: Play Store kill-mode — all Play Store traffic will be dropped")
         } else {
             // DNS-only mode: only packets destined to our fake DNS server (10.0.0.1:53) enter
-            // the VPN. All TCP and non-DNS UDP bypass the VPN → WhatsApp, etc. unaffected.
+            // the VPN. All TCP and non-DNS UDP bypass the VPN ג†’ WhatsApp, etc. unaffected.
             // When hideGooglePlay is also true here, Play Store DNS is NXDOMAIN'd below.
             playStoreKillMode = false
             builder.addRoute("10.0.0.1", 32)
@@ -212,20 +224,23 @@ class TetherVpnService : VpnService() {
     // ── פעולת רשת אסינכרונית ──────────────────────────────────────────────────
 
     private suspend fun forwardDnsAsync(query: ByteArray): ByteArray? = withContext(Dispatchers.IO) {
-        try {
-            DatagramSocket().use { socket ->
-                protect(socket)
-                val upstream = InetAddress.getByName("8.8.8.8")
-                socket.send(DatagramPacket(query, query.size, upstream, 53))
-                socket.soTimeout = 3000
-                val buf = ByteArray(512)
-                val resp = DatagramPacket(buf, buf.size)
-                socket.receive(resp)
-                buf.copyOf(resp.length)
+        for (resolver in DNS_UPSTREAMS) {
+            try {
+                DatagramSocket().use { socket ->
+                    protect(socket)
+                    val upstream = InetAddress.getByName(resolver)
+                    socket.send(DatagramPacket(query, query.size, upstream, 53))
+                    socket.soTimeout = 3000
+                    val buf = ByteArray(512)
+                    val resp = DatagramPacket(buf, buf.size)
+                    socket.receive(resp)
+                    return@withContext buf.copyOf(resp.length)
+                }
+            } catch (_: Exception) {
+                // Try next resolver.
             }
-        } catch (e: Exception) {
-            null
         }
+        null
     }
 
     // ── כתיבה בטוחה (Thread-Safe) לממשק ה-VPN ─────────────────────────────────
@@ -264,11 +279,15 @@ class TetherVpnService : VpnService() {
      * Central block decision.
      *
      * Priority order:
-     *  1. hideGooglePlay → always block Play Store endpoints (regardless of webFilterMode)
-     *  2. BLACKLIST → block domains in blockedDomains list
-     *  3. WHITELIST → block anything NOT in allowedDomains
+     *  1. hideGooglePlay ג†’ always block Play Store endpoints (regardless of webFilterMode)
+     *  2. BLACKLIST ג†’ block domains in blockedDomains list
+     *  3. WHITELIST ג†’ block anything NOT in allowedDomains
      */
     private fun isDomainBlockedByPolicy(domain: String, policy: CommunityPolicy?): Boolean {
+        // שחרור הגנה הרמטי אם יש חלון הסרה פעיל
+        if (TetherPolicyManager.isUninstallWindowActive(this)) return false
+        if (isEssentialAllowedDomain(domain)) return false
+
         if (policy?.hideGooglePlay == true && isPlayStoreDomain(domain)) return true
 
         if (policy == null) return false
@@ -280,6 +299,10 @@ class TetherVpnService : VpnService() {
                 !isDomainAllowed(domain, policy.allowedDomains)
             else -> false
         }
+    }
+
+    private fun isEssentialAllowedDomain(domain: String): Boolean {
+        return ESSENTIAL_ALLOWED_DOMAINS.any { d -> domain == d || domain.endsWith(".$d") }
     }
 
     /**

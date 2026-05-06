@@ -19,6 +19,7 @@ import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.sterni.tether.R
+import com.google.gson.JsonParser
 import com.sterni.tether.data.api.HeartbeatRequest
 import com.sterni.tether.data.api.RetrofitClient
 import com.sterni.tether.data.api.TetherApiService
@@ -66,7 +67,7 @@ class TetherWatchdogService : Service() {
     private var lastPolicySyncAt = 0L
     private var lastUpdateCheckAt = 0L
 
-    // ── Lifecycle ────────────────────────────────────────────────────────────
+    // ג”€ג”€ Lifecycle ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     override fun onCreate() {
         super.onCreate()
@@ -93,7 +94,7 @@ class TetherWatchdogService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    // ── Periodic check ───────────────────────────────────────────────────────
+    // ג”€ג”€ Periodic check ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private val checkRunnable = object : Runnable {
         override fun run() {
@@ -103,6 +104,8 @@ class TetherWatchdogService : Service() {
     }
 
     private fun runChecks() {
+        TetherPolicyManager.cleanupExpiredTemporaryApprovals(this)
+
         val accessibilityOk = isAccessibilityEnabled()
         val adminOk = isDeviceAdminActive()
         val vpnNeeded = isVpnNeeded()
@@ -148,14 +151,14 @@ class TetherWatchdogService : Service() {
             lastHeartbeatAt = now
         }
 
-        // Silent self-update check every 30 minutes (Device Owner only)
+        // Silent update check every 30 minutes (Device Owner only)
         if (now - lastUpdateCheckAt >= UPDATE_CHECK_INTERVAL_MS) {
             lastUpdateCheckAt = now
-            serviceScope.launch { TetherUpdater.checkAndUpdate(this@TetherWatchdogService) }
+            serviceScope.launch { TetherUpdater.checkAndUpdateAll(this@TetherWatchdogService) }
         }
     }
 
-    // ── Status checks ────────────────────────────────────────────────────────
+    // ג”€ג”€ Status checks ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private fun isAccessibilityEnabled(): Boolean {
         val enabled = Settings.Secure.getString(
@@ -175,7 +178,7 @@ class TetherWatchdogService : Service() {
     private fun isVpnNeeded(): Boolean =
         TetherPolicyManager.isEnrolled(this)
 
-    // ── Fast policy sync (every 60 s) ────────────────────────────────────────
+    // ג”€ג”€ Fast policy sync (every 60 s) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private suspend fun syncPolicy() {
         if (!TetherPolicyManager.isEnrolled(this)) return
@@ -195,8 +198,9 @@ class TetherWatchdogService : Service() {
             for (command in body.pendingCommands) {
                 when (command.type) {
                     "FORCE_SYNC"   -> TetherPolicyManager.applyPolicy(this, policy)
-                    "RELEASE_ALL"  -> TetherPolicyManager.releaseAllAndUninstall(this)
+                    "RELEASE_ALL"  -> TetherPolicyManager.releaseAllAndUninstall(this, force = true)
                     "SHOW_MESSAGE" -> if (command.payload.isNotBlank()) showAdminMessage(command.payload)
+                    "APPROVAL_GRANTED" -> applyApprovalGrant(command.payload)
                 }
             }
 
@@ -228,7 +232,21 @@ class TetherWatchdogService : Service() {
             .notify(NOTIF_ID_ADMIN_MSG, notif)
     }
 
-    // ── Heartbeat ────────────────────────────────────────────────────────────
+    private fun applyApprovalGrant(payload: String) {
+        runCatching {
+            val obj = JsonParser().parse(payload).asJsonObject
+            val packageName = obj.get("packageName")?.takeIf { !it.isJsonNull }?.asString?.trim().orEmpty()
+            val expiresAt = obj.get("expiresAt")?.takeIf { !it.isJsonNull }?.asLong ?: 0L
+            if (packageName.isNotBlank() && expiresAt > System.currentTimeMillis()) {
+                TetherPolicyManager.grantTemporaryAppAccess(this, packageName, expiresAt)
+                showAdminMessage("הגישה אושרה זמנית עבור $packageName")
+            }
+        }.onFailure {
+            Log.w(TAG, "Failed to apply APPROVAL_GRANTED command: ${it.message}")
+        }
+    }
+
+    // ג”€ג”€ Heartbeat ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private fun sendHeartbeat(accessibilityOk: Boolean, adminOk: Boolean, vpnOk: Boolean) {
         val deviceId = TetherPolicyManager.getDeviceId(this) ?: return
@@ -248,7 +266,7 @@ class TetherWatchdogService : Service() {
         }
     }
 
-    // ── Alarm-based restart fallback ─────────────────────────────────────────
+    // ג”€ג”€ Alarm-based restart fallback ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private fun scheduleAlarmRestart() {
         val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -265,7 +283,7 @@ class TetherWatchdogService : Service() {
         )
     }
 
-    // ── Notifications ────────────────────────────────────────────────────────
+    // ג”€ג”€ Notifications ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
     private fun buildPersistentNotification(): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID)

@@ -30,6 +30,7 @@ fun HomeScreen(
     onCalendarClick: () -> Unit,
     onNewsClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onStoreClick: () -> Unit,
     onEnterAdmin: () -> Unit
 ) {
     val context = LocalContext.current
@@ -102,7 +103,7 @@ fun HomeScreen(
         ) {
             Spacer(Modifier.height(40.dp))
 
-            // Long-press 5x on logo → admin entry
+            // Long-press 5x on logo ג†’ admin entry
             Text(
                 text = "Tether",
                 fontSize = 34.sp,
@@ -209,6 +210,16 @@ fun HomeScreen(
                 ServiceCard(Modifier.weight(1f), Icons.Default.CalendarMonth, "לוח שנה", onCalendarClick)
                 ServiceCard(Modifier.weight(1f), Icons.Default.Newspaper, "חדשות", onNewsClick)
             }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ServiceCard(Modifier.weight(1f), Icons.Default.Apps, "האפליקציות שלי", onStoreClick)
+                Spacer(Modifier.weight(1f)) // Placeholder
+            }
         }
     }
 }
@@ -242,6 +253,7 @@ fun HomeScreenPreview() {
             onCalendarClick = {},
             onNewsClick = {},
             onSettingsClick = {},
+            onStoreClick = {},
             onEnterAdmin = {}
         )
     }

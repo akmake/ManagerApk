@@ -1,9 +1,12 @@
 package com.sterni.tether.ui.screens.admin
 
 import android.app.Application
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -62,6 +65,7 @@ fun AdminDashboardScreen(
     onApprovalsClick: () -> Unit,
     onProvisioningClick: () -> Unit,
     onGlobalOverviewClick: () -> Unit = {},
+    onApprovedAppsClick: () -> Unit = {},
     onLogout: () -> Unit,
     vm: AdminDashboardViewModel = viewModel()
 ) {
@@ -75,18 +79,33 @@ fun AdminDashboardScreen(
     LaunchedEffect(Unit) { vm.load(token) }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
         topBar = {
-            TopAppBar(
-                title = { Text("שלום, $adminName") },
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "מרכז בקרה",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 actions = {
-                    IconButton(onClick = {
-                        AdminSession.logout(context)
-                        onLogout()
-                    }) {
-                        Icon(Icons.Default.Logout, "יציאה")
+                    IconButton(
+                        onClick = {
+                            AdminSession.logout(context)
+                            onLogout()
+                        }
+                    ) {
+                        Icon(
+                            Icons.Default.Logout,
+                            contentDescription = "יציאה",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
     ) { padding ->
@@ -100,95 +119,166 @@ fun AdminDashboardScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { Spacer(Modifier.height(4.dp)) }
-
-            // Provisioning button
             item {
-                Button(
-                    onClick = onProvisioningClick,
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                Text(
+                    "שלום, $adminName",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            // Overview Stats Card
+            item {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
                 ) {
-                    Icon(Icons.Default.QrCode, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("QR הגדרת מכשיר חדש", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "סיכום מכשירים",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Icon(
+                                Icons.Default.BarChart,
+                                null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            StatMiniItem(
+                                label = "סה\"כ",
+                                value = "${stats?.totalDevices ?: 0}",
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            StatDivider()
+                            StatMiniItem(
+                                label = "פעילים",
+                                value = "${(stats?.totalDevices ?: 0) - (stats?.inactiveDevices ?: 0)}",
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            StatDivider()
+                            StatMiniItem(
+                                label = "ממתינים",
+                                value = "${stats?.pendingApprovals ?: 0}",
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
                 }
             }
 
-            // Global overview button
             item {
-                OutlinedButton(
-                    onClick = onGlobalOverviewClick,
-                    modifier = Modifier.fillMaxWidth().height(48.dp)
-                ) {
-                    Icon(Icons.Default.ManageSearch, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("סקירה גלובלית — כל המכשירים והקהילות", fontSize = 14.sp)
-                }
+                Text(
+                    "פעולות מהירות",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
-            item { Spacer(Modifier.height(4.dp)) }
-
-            // Stats grid
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StatCard(
+                    QuickActionCard(
                         modifier = Modifier.weight(1f),
-                        icon = Icons.Default.People,
-                        label = "קהילות",
-                        value = "${stats?.totalCommunities ?: 0}",
+                        icon = Icons.Default.QrCodeScanner,
+                        label = "חיבור מכשיר",
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        onClick = onProvisioningClick
+                    )
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Groups,
+                        label = "ניהול קהילות",
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
                         onClick = onCommunitiesClick
                     )
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.PhoneAndroid,
-                        label = "מכשירים",
-                        value = "${stats?.totalDevices ?: 0}"
-                    )
                 }
             }
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StatCard(
+                    QuickActionCard(
                         modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Pending,
-                        label = "בקשות ממתינות",
-                        value = "${stats?.pendingApprovals ?: 0}",
-                        badge = (stats?.pendingApprovals ?: 0) > 0,
-                        onClick = onApprovalsClick
+                        icon = Icons.Default.Apps,
+                        label = "Approved Apps",
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        onClick = onApprovedAppsClick
                     )
-                    StatCard(
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuickActionCard(
                         modifier = Modifier.weight(1f),
-                        icon = Icons.Default.WifiOff,
-                        label = "לא פעילים 7+ ימים",
-                        value = "${stats?.inactiveDevices ?: 0}",
-                        warn = (stats?.inactiveDevices ?: 0) > 0
+                        icon = Icons.Default.Domain,
+                        label = "סקירה כללית",
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        onClick = onGlobalOverviewClick
+                    )
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.VerifiedUser,
+                        label = "אישורים",
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        onClick = onApprovalsClick,
+                        badge = (stats?.pendingApprovals ?: 0) > 0
                     )
                 }
             }
 
             item {
-                Spacer(Modifier.height(4.dp))
-                Text("פעילות אחרונה", fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "פעילות אחרונה",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    TextButton(onClick = { /* View all activity */ }) {
+                        Text("הצג הכל")
+                    }
+                }
             }
 
             if (activity.isEmpty()) {
                 item {
-                    Text("אין פעילות עדיין", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 16.dp))
+                    EmptyActivityPlaceholder()
                 }
             } else {
-                items(activity) { item -> ActivityRow(item) }
+                items(activity.take(5)) { item ->
+                    ActivityListItem(item)
+                }
             }
 
             item { Spacer(Modifier.height(16.dp)) }
@@ -197,55 +287,147 @@ fun AdminDashboardScreen(
 }
 
 @Composable
-private fun StatCard(
+private fun StatMiniItem(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            value,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = color
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = color.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+private fun StatDivider() {
+    VerticalDivider(
+        modifier = Modifier.height(40.dp),
+        thickness = 1.dp,
+        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
+    )
+}
+
+@Composable
+private fun QuickActionCard(
     modifier: Modifier = Modifier,
     icon: ImageVector,
     label: String,
-    value: String,
-    badge: Boolean = false,
-    warn: Boolean = false,
-    onClick: (() -> Unit)? = null
+    color: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+    badge: Boolean = false
 ) {
-    Card(
-        modifier = modifier,
-        onClick = onClick ?: {},
-        enabled = onClick != null,
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                badge -> MaterialTheme.colorScheme.errorContainer
-                warn  -> MaterialTheme.colorScheme.tertiaryContainer
-                else  -> MaterialTheme.colorScheme.surfaceVariant
-            }
-        )
+    OutlinedCard(
+        onClick = onClick,
+        modifier = modifier.height(110.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = color.copy(alpha = 0.2f)),
+        border = CardDefaults.outlinedCardBorder(enabled = true)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Icon(icon, null, modifier = Modifier.size(24.dp),
-                tint = if (badge) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(8.dp))
-            Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Column(
+                modifier = Modifier.align(Alignment.BottomStart)
+            ) {
+                Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            if (badge) {
+                Surface(
+                    modifier = Modifier.size(12.dp).align(Alignment.TopEnd),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.error
+                ) {}
+            }
         }
     }
 }
 
 @Composable
-private fun ActivityRow(item: ActivityItem) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+private fun ActivityListItem(item: ActivityItem) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Icon(Icons.Default.Circle, null, modifier = Modifier.size(8.dp),
-            tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(item.description, fontSize = 14.sp)
-            if (!item.communityName.isNullOrBlank()) {
-                Text(item.communityName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            ) {
+                Icon(
+                    when (item.type) {
+                        "DEVICE_ENROLLED" -> Icons.Default.PhoneAndroid
+                        "COMMUNITY_CREATED" -> Icons.Default.Groups
+                        "APPROVAL_PENDING" -> Icons.Default.NotificationImportant
+                        else -> Icons.Default.History
+                    },
+                    null,
+                    modifier = Modifier.padding(10.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    item.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (!item.communityName.isNullOrBlank()) {
+                    Text(
+                        item.communityName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Text(
+                item.timestamp,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-        Text(item.timestamp, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 }
+
+@Composable
+private fun EmptyActivityPlaceholder() {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        border = CardDefaults.outlinedCardBorder(enabled = true)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.Inbox,
+                null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "אין פעילות להצגה",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+

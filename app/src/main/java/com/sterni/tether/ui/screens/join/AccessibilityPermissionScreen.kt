@@ -41,7 +41,7 @@ fun isAccessibilityEnabled(context: Context): Boolean {
 }
 
 // Android 13+ blocks accessibility for sideloaded apps until the user explicitly
-// allows "Restricted settings" via App Info → three-dot menu.
+// allows "Restricted settings" via App Info ג†’ three-dot menu.
 fun isRestrictedSettingsAllowed(context: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
     return try {

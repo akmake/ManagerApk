@@ -94,7 +94,7 @@ interface AdminApiService {
     suspend fun resolveApproval(
         @Header("Authorization") token: String,
         @Path("id") id: String,
-        @Body body: Map<String, String>
+        @Body body: Map<String, Any>
     ): Response<ApprovalRequest>
 
     // Per-device commands
@@ -154,6 +154,31 @@ interface AdminApiService {
         @Header("Authorization") token: String,
         @Path("id") id: String
     ): Response<Unit>
+
+    // Approved apps catalog (admin management)
+    @GET("tether/admin/apps/approved")
+    suspend fun getApprovedAppsCatalog(
+        @Header("Authorization") token: String
+    ): Response<List<AdminApprovedApp>>
+
+    @POST("tether/admin/apps/approved")
+    suspend fun upsertApprovedApp(
+        @Header("Authorization") token: String,
+        @Body body: Map<String, Any>
+    ): Response<AdminApprovedApp>
+
+    @PUT("tether/admin/apps/approved/{id}")
+    suspend fun updateApprovedApp(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Body body: Map<String, Any>
+    ): Response<AdminApprovedApp>
+
+    @DELETE("tether/admin/apps/approved/{id}")
+    suspend fun deactivateApprovedApp(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<Map<String, Any>>
 }
 
 data class CommunityDetailResponse(

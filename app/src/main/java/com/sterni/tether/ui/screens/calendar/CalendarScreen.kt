@@ -51,7 +51,7 @@ import kotlin.math.roundToInt
 
 // Columns: index 0 = Sunday (appears rightmost in RTL), index 6 = Saturday (appears leftmost in RTL)
 private val HEADERS_EN = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-private val HEADERS_HE = listOf("א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳")
+private val HEADERS_HE = listOf("א", "ב", "ג", "ד", "ה", "ו", "ש")
 
 private val SaturdayAmber = Color(0xFFF59E0B)
 private val DividerColor  = Color(0xFFEEEEEE)
@@ -108,7 +108,7 @@ fun CalendarScreen(vm: CalendarViewModel = viewModel()) {
                     .fillMaxSize()
                     .padding(bottom = padding.calculateBottomPadding()) // שומר רק על הפאדינג התחתון שצריך
             ) {
-                // ── Top bar ──────────────────────────────────────────────────
+                // Top bar
                 CalendarTopBar(
                     modifier = Modifier.statusBarsPadding(), // דוחף את התוכן של השורת כותרת בדיוק מתחת לסורת סטטוס
                     state       = state,
@@ -121,7 +121,7 @@ fun CalendarScreen(vm: CalendarViewModel = viewModel()) {
 
                 HorizontalDivider(color = DividerColor, thickness = 0.5.dp)
 
-                // ── Column headers ───────────────────────────────────────────
+                // Column headers
                 val headers = if (state.hebrewMode) HEADERS_HE else HEADERS_EN
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                     headers.forEachIndexed { i, label ->
@@ -139,7 +139,7 @@ fun CalendarScreen(vm: CalendarViewModel = viewModel()) {
 
                 HorizontalDivider(color = DividerColor, thickness = 0.5.dp)
 
-                // ── Month grid ───────────────────────────────────────────────
+                // ג”€ג”€ Month grid ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
                 val offset     = state.startOffset
                 val totalCells = offset + state.days.size
                 val rows       = (totalCells + 6) / 7
@@ -178,7 +178,7 @@ fun CalendarScreen(vm: CalendarViewModel = viewModel()) {
                 }
             }
 
-            // ── Day detail sheet ─────────────────────────────────────────────
+            // ג”€ג”€ Day detail sheet ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
             selectedDay?.let { day ->
                 DayDetailSheet(
                     day        = day,
@@ -193,7 +193,7 @@ fun CalendarScreen(vm: CalendarViewModel = viewModel()) {
     }
 }
 
-// ── Top Bar ──────────────────────────────────────────────────────────────────
+// ג”€ג”€ Top Bar ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun CalendarTopBar(
@@ -211,7 +211,7 @@ private fun CalendarTopBar(
             .padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // In RTL: first item → rightmost visually
+        // In RTL: first item ג†’ rightmost visually
         // Hamburger (far right)
         IconButton(onClick = onOpenDrawer) {
             Icon(Icons.Outlined.Menu, contentDescription = null, tint = TetherInk)
@@ -305,7 +305,7 @@ private fun CalendarTopBar(
     }
 }
 
-// ── Day Cell ──────────────────────────────────────────────────────────────────
+// ג”€ג”€ Day Cell ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun MonthDayCell(
@@ -408,7 +408,7 @@ private fun CalEventChip(ev: CalEvent) {
     }
 }
 
-// ── Day Detail ────────────────────────────────────────────────────────────────
+// ג”€ג”€ Day Detail ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -701,7 +701,7 @@ private fun EventSheetRow(ev: CalEvent, allDay: Boolean) {
     }
 }
 
-// ── Drawer ────────────────────────────────────────────────────────────────────
+// ג”€ג”€ Drawer ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
 private fun CalendarDrawer(
@@ -860,7 +860,7 @@ private fun CalendarCheckRow(cal: CalendarInfo, onToggle: () -> Unit) {
     }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ג”€ג”€ Helpers ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 private fun formatMinute(min: Int): String {
     if (min < 0) return ""

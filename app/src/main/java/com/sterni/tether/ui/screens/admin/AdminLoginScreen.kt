@@ -25,6 +25,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.util.Log
 import com.sterni.tether.admin.AdminSession
 import com.sterni.tether.data.api.RetrofitClient
 import com.sterni.tether.data.api.AuthApiService
@@ -41,6 +42,7 @@ sealed class LoginState {
 }
 
 class AdminLoginViewModel(app: Application) : AndroidViewModel(app) {
+    companion object { private const val TAG = "AdminLogin" }
     private val api = RetrofitClient.create(AuthApiService::class.java)
     private val _state = MutableStateFlow<LoginState>(LoginState.Idle)
     val state: StateFlow<LoginState> = _state
@@ -63,6 +65,7 @@ class AdminLoginViewModel(app: Application) : AndroidViewModel(app) {
                     _state.value = LoginState.Error("אימייל או סיסמה שגויים")
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Login request failed: ${e.javaClass.simpleName}: ${e.message}")
                 _state.value = LoginState.Error("שגיאת רשת")
             }
         }

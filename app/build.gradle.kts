@@ -12,6 +12,12 @@ val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) load(keystorePropertiesFile.inputStream())
 }
+val releaseBaseUrl = "https://dahanswebsite.com/api/"
+val debugBaseUrl = providers.gradleProperty("DEBUG_BASE_URL")
+    .orNull
+    ?.trim()
+    ?.let { if (it.endsWith("/")) it else "$it/" }
+    ?: releaseBaseUrl
 
 android {
     namespace = "com.sterni.tether"
@@ -26,7 +32,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "BASE_URL", "\"https://dahanswebsite.com/api/\"")
+        buildConfigField("String", "BASE_URL", "\"$releaseBaseUrl\"")
+        buildConfigField("String", "APK_DOWNLOAD_URL", "\"${releaseBaseUrl}tether/app/download\"")
     }
 
     signingConfigs {
@@ -48,7 +55,8 @@ android {
             )
         }
         debug {
-            buildConfigField("String", "BASE_URL", "\"https://dahanswebsite.com/api/\"")
+            buildConfigField("String", "BASE_URL", "\"$debugBaseUrl\"")
+            buildConfigField("String", "APK_DOWNLOAD_URL", "\"${debugBaseUrl}tether/app/download\"")
         }
     }
 

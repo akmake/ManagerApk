@@ -19,15 +19,15 @@ import androidx.compose.ui.unit.sp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
+import com.sterni.tether.BuildConfig
 
-private const val APK_URL = "https://dahanswebsite.com/api/tether/app/download"
 private const val APK_CHECKSUM = "xycL3kb4-mXnqvRJV43SyQyqIgU1D4Nw9U1UWdJ8urs"
 private const val ADMIN_COMPONENT = "com.sterni.tether/.admin.TetherDeviceAdminReceiver"
 
 private fun buildProvisioningJson(): String = """
 {
   "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "$ADMIN_COMPONENT",
-  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "$APK_URL",
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "${BuildConfig.APK_DOWNLOAD_URL}",
   "android.app.extra.PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM": "$APK_CHECKSUM",
   "android.app.extra.PROVISIONING_SKIP_ENCRYPTION": false,
   "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": true,

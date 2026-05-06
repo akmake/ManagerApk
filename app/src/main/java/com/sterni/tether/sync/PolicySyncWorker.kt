@@ -6,6 +6,7 @@ import android.content.Context
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
+import com.google.gson.JsonParser
 import com.sterni.tether.R
 import com.sterni.tether.admin.AppScanner
 import com.sterni.tether.admin.TetherPolicyManager
@@ -33,8 +34,40 @@ class PolicySyncWorker(
                 val isDo = TetherPolicyManager.isDeviceOwner(context)
                 val isA11y = com.sterni.tether.admin.TetherAccessibilityService.isRunning
                 val installed = AppScanner.getInstalledApps(context)
-                api.reportApps(deviceId, ReportAppsRequest(deviceId = deviceId, apps = installed))
-                Log.i(TAG, "Heartbeat sent: DO=$isDo, A11y=$isA11y")
+                
+                // זיהוי אפליקציות חדשות
+                val prefs = context.getSharedPreferences("tether_sync_state", Context.MODE_PRIVATE)
+                val lastReportedPkgs = prefs.getStringSet("last_reported_apps", emptySet()) ?: emptySet()
+                val currentPkgs = installed.map { it.packageName }.toSet()
+                
+                val newApps = installed.filter { it.packageName !in lastReportedPkgs }
+                if (newApps.isNotEmpty() && lastReportedPkgs.isNotEmpty()) {
+                    // המשתמש התקין אפליקציות חדשות! נדווח למנהל כאירוע אבטחה
+                    newApps.forEach { app ->
+                        try {
+                            api.logSecurityEvent(deviceId, com.sterni.tether.data.api.SecurityEventRequest(
+                                type = "NEW_APP_INSTALLED", // נצטרך להוסיף את זה ל-Enum בשרת
+                                packageName = "${app.appName} (${app.packageName})"
+                            ))
+                        } catch (_: Exception) {}
+                    }
+                }
+                
+                // עדכון הרשימה השמורה
+                prefs.edit().putStringSet("last_reported_apps", currentPkgs).apply()
+
+                // דיווח הרשימה המלאה לשרת
+                api.reportApps(deviceId, ReportAppsRequest(deviceId = deviceId, installedApps = installed))
+                
+                // Heartbeat
+                api.sendHeartbeat(deviceId, com.sterni.tether.data.api.HeartbeatRequest(
+                    accessibilityEnabled = isA11y,
+                    isDeviceAdmin = true,
+                    isDeviceOwner = isDo,
+                    vpnActive = com.sterni.tether.admin.TetherVpnService.isRunning
+                ))
+                
+                Log.i(TAG, "Status and ${installed.size} apps reported. Found ${newApps.size} new apps.")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to report status: " + e.message)
             }
@@ -57,7 +90,8 @@ class PolicySyncWorker(
                     when (command.type) {
                         "SHOW_MESSAGE" -> showAdminMessage(context, command.payload)
                         "FORCE_SYNC"   -> if (policy != null) TetherPolicyManager.applyPolicy(context, policy)
-                        "RELEASE_ALL"  -> TetherPolicyManager.releaseAllAndUninstall(context)
+                        "RELEASE_ALL"  -> TetherPolicyManager.releaseAllAndUninstall(context, force = true)
+                        "APPROVAL_GRANTED" -> applyApprovalGrant(context, command.payload)
                     }
                 }
 
@@ -93,6 +127,20 @@ class PolicySyncWorker(
             .setAutoCancel(true)
             .build()
         nm.notify(NOTIF_ID_ADMIN_MSG, notif)
+    }
+
+    private fun applyApprovalGrant(context: Context, payload: String) {
+        runCatching {
+            val obj = JsonParser().parse(payload).asJsonObject
+            val packageName = obj.get("packageName")?.takeIf { !it.isJsonNull }?.asString?.trim().orEmpty()
+            val expiresAt = obj.get("expiresAt")?.takeIf { !it.isJsonNull }?.asLong ?: 0L
+            if (packageName.isNotBlank() && expiresAt > System.currentTimeMillis()) {
+                TetherPolicyManager.grantTemporaryAppAccess(context, packageName, expiresAt)
+                showAdminMessage(context, "הגישה אושרה זמנית עבור $packageName")
+            }
+        }.onFailure {
+            Log.w(TAG, "Failed to apply APPROVAL_GRANTED command: ${it.message}")
+        }
     }
 
     companion object {
