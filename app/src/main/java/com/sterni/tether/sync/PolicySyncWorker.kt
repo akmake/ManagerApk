@@ -99,6 +99,7 @@ class PolicySyncWorker(
                 if ((body?.allowUninstall == true) && !TetherPolicyManager.isUninstallWindowActive(context)) {
                     TetherPolicyManager.startUninstallWindow(context)
                     if (policy != null) TetherPolicyManager.applyPolicy(context, policy)
+                    TetherPolicyManager.showUninstallNotification(context)
                     Log.i(TAG, "Uninstall window started — 1h from now")
                 }
                 Result.success()

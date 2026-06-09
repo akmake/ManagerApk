@@ -24,6 +24,7 @@ import com.sterni.tether.data.api.HeartbeatRequest
 import com.sterni.tether.data.api.RetrofitClient
 import com.sterni.tether.data.api.TetherApiService
 import com.sterni.tether.data.model.*
+import com.sterni.tether.data.model.WebFilterMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -119,6 +120,23 @@ class TetherWatchdogService : Service() {
             Log.i(TAG, "Uninstall window expired — protections restored")
         }
 
+        // Time-lock expiry — device-level lock and per-app locks are epoch-based.
+        // The server keeps returning the same lockedUntilTs value even after the time passes,
+        // so the policy-change comparison won't trigger a re-apply. We check locally.
+        val storedPolicy = TetherPolicyManager.loadPolicy(this)
+        if (storedPolicy != null) {
+            val now = System.currentTimeMillis()
+            val deviceLockExpired = storedPolicy.lockedUntilTs != null &&
+                    storedPolicy.lockedUntilTs in 1 until now
+            val appLockExpired = storedPolicy.appTimeLocks.any { lock ->
+                lock.lockedUntilTs != null && lock.lockedUntilTs in 1 until now
+            }
+            if (deviceLockExpired || appLockExpired) {
+                TetherPolicyManager.applyStoredPolicy(this)
+                Log.i(TAG, "Time lock expired — policy re-applied (deviceLock=$deviceLockExpired, appLock=$appLockExpired)")
+            }
+        }
+
         // Restart VPN if it died and is still needed
         if (vpnNeeded && !vpnOk) {
             try { startForegroundService(Intent(this, TetherVpnService::class.java)) } catch (_: Exception) {}
@@ -174,9 +192,13 @@ class TetherWatchdogService : Service() {
         return dpm.isAdminActive(admin)
     }
 
-    // VPN תמיד רץ כשמחובר לקהילה — חוסם הורדת APK ברמת הרשת
-    private fun isVpnNeeded(): Boolean =
-        TetherPolicyManager.isEnrolled(this)
+    // VPN runs when there is something to filter — matches applyWebFilter logic.
+    // Without this, the watchdog would restart a VPN that applyWebFilter intentionally stopped.
+    private fun isVpnNeeded(): Boolean {
+        if (!TetherPolicyManager.isEnrolled(this)) return false
+        val policy = TetherPolicyManager.loadPolicy(this) ?: return true
+        return policy.hideGooglePlay || policy.webFilterMode != WebFilterMode.NONE
+    }
 
     // ג”€ג”€ Fast policy sync (every 60 s) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
@@ -208,6 +230,7 @@ class TetherWatchdogService : Service() {
             if (body.allowUninstall && !TetherPolicyManager.isUninstallWindowActive(this)) {
                 TetherPolicyManager.startUninstallWindow(this)
                 TetherPolicyManager.applyPolicy(this, policy)
+                TetherPolicyManager.showUninstallNotification(this)
                 Log.i(TAG, "Uninstall window started — 1h from now")
             }
         } catch (e: Exception) {

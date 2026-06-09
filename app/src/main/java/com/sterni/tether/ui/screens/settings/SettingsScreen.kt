@@ -1,9 +1,12 @@
 package com.sterni.tether.ui.screens.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.People
@@ -36,6 +39,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val communityName = TetherPolicyManager.getCommunityName(context) ?: "-"
     val isDeviceOwner = TetherPolicyManager.isDeviceOwner(context)
+    val isUninstallWindowOpen = remember { TetherPolicyManager.isUninstallWindowActive(context) }
 
     var showUninstallDialog by remember { mutableStateOf(false) }
     var enteredCode by remember { mutableStateOf("") }
@@ -202,14 +206,56 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            Button(
-                onClick = { showUninstallDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Warning, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("פתיחת חלון הסרה", fontFamily = HebrewFont)
+            if (isUninstallWindowOpen) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "המנהל אישר הסרת האפליקציה",
+                                fontFamily = HebrewFont,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_DELETE).apply {
+                                        data = Uri.parse("package:${context.packageName}")
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("הסר עכשיו", fontFamily = HebrewFont)
+                        }
+                    }
+                }
+            } else {
+                Button(
+                    onClick = { showUninstallDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Warning, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("פתיחת חלון הסרה", fontFamily = HebrewFont)
+                }
             }
         }
     }

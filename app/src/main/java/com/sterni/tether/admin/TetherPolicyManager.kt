@@ -1,13 +1,18 @@
 package com.sterni.tether.admin
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.UserManager
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.sterni.tether.R
 import com.sterni.tether.data.model.AppTimeLock
 import com.sterni.tether.data.model.BlockedActionBehavior
 import com.sterni.tether.data.model.CommunityPolicy
@@ -26,6 +31,8 @@ object TetherPolicyManager {
     private const val KEY_UNINSTALL_EXPIRES_AT = "uninstall_expires_at"  // epoch ms, 0 = no active window
     private const val KEY_TEMP_APP_APPROVALS = "temp_app_approvals"        // JSON: package -> expiry epoch ms
     private const val UNINSTALL_WINDOW_MS = 60 * 60 * 1000L              // 1 hour
+    private const val CHANNEL_RELEASE = "tether_release"
+    private const val NOTIF_ID_RELEASE = 3001
 
     private val gson = Gson()
 
@@ -401,6 +408,7 @@ object TetherPolicyManager {
                     UserManager.DISALLOW_ADD_USER,
                     UserManager.DISALLOW_DEBUGGING_FEATURES,
                     UserManager.DISALLOW_APPS_CONTROL,
+                    UserManager.DISALLOW_UNINSTALL_APPS,
                     UserManager.DISALLOW_MODIFY_ACCOUNTS
                 ).forEach { restriction ->
                     try { dpm.clearUserRestriction(admin, restriction) } catch (_: Exception) {}
@@ -435,16 +443,35 @@ object TetherPolicyManager {
             .remove(KEY_COMMUNITY_NAME)
             .remove(KEY_POLICY)
             .apply()
-        try {
-            val intent = Intent(Intent.ACTION_DELETE).apply {
-                data = android.net.Uri.parse("package:${context.packageName}")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to launch uninstall: ${e.message}", e)
-        }
+        // Can't startActivity from background (Android 10+) — show notification instead.
+        showUninstallNotification(context)
         return true
+    }
+
+    fun showUninstallNotification(context: Context) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_RELEASE, "שחרור הגנה", NotificationManager.IMPORTANCE_HIGH)
+        )
+        val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
+            data = android.net.Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val pi = PendingIntent.getActivity(
+            context, NOTIF_ID_RELEASE, uninstallIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notif = NotificationCompat.Builder(context, CHANNEL_RELEASE)
+            .setContentTitle("ניתן להסיר את Tether")
+            .setContentText("המנהל אישר הסרת האפליקציה. לחץ כדי להסיר.")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("המנהל אישר הסרת האפליקציה. לחץ על ההתראה כדי לפתוח את דיאלוג המחיקה."))
+            .setSmallIcon(R.drawable.app_logo)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setContentIntent(pi)
+            .build()
+        nm.notify(NOTIF_ID_RELEASE, notif)
+        Log.i(TAG, "Uninstall notification shown")
     }
 
     fun applyWebFilter(context: Context, policy: CommunityPolicy) {
