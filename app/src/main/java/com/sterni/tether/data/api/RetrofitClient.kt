@@ -1,14 +1,32 @@
 package com.sterni.tether.data.api
 
 import com.sterni.tether.BuildConfig
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
+    // Supplies the per-device secret token (from TetherPolicyManager).
+    // Set once in TetherApp.onCreate(). Read at request time (not captured) so it always reflects the latest token.
+    @Volatile private var deviceTokenProvider: () -> String? = { null }
+    fun setDeviceTokenProvider(provider: () -> String?) { deviceTokenProvider = provider }
+
+    // Attaches X-Device-Token to device-facing endpoints only.
+    private val deviceAuthInterceptor = Interceptor { chain ->
+        val req = chain.request()
+        val token = if (req.url.encodedPath.contains("/devices/")) deviceTokenProvider() else null
+        if (!token.isNullOrEmpty()) {
+            chain.proceed(req.newBuilder().header("X-Device-Token", token).build())
+        } else {
+            chain.proceed(req)
+        }
+    }
+
     private val client by lazy {
         OkHttpClient.Builder()
+            .addInterceptor(deviceAuthInterceptor)
             .connectTimeout(60, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)

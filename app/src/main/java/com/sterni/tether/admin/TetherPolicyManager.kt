@@ -26,6 +26,7 @@ object TetherPolicyManager {
     private const val PREFS = "tether_policy"
     private const val KEY_POLICY = "current_policy"
     private const val KEY_DEVICE_ID = "device_id"
+    private const val KEY_DEVICE_TOKEN = "device_token"
     private const val KEY_COMMUNITY_ID = "community_id"
     private const val KEY_COMMUNITY_NAME = "community_name"
     private const val KEY_UNINSTALL_EXPIRES_AT = "uninstall_expires_at"  // epoch ms, 0 = no active window
@@ -274,6 +275,17 @@ object TetherPolicyManager {
     fun getDeviceId(context: Context): String? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_DEVICE_ID, null)
 
+    /** Per-device secret token (issued at join). Sent as X-Device-Token on every device call. */
+    fun saveDeviceToken(context: Context, token: String?) {
+        if (token.isNullOrEmpty()) return
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_DEVICE_TOKEN, token)
+            .apply()
+    }
+
+    fun getDeviceToken(context: Context): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_DEVICE_TOKEN, null)
+
     fun getCommunityId(context: Context): String? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_COMMUNITY_ID, null)
 
@@ -439,6 +451,7 @@ object TetherPolicyManager {
         removeDeviceOwner(context)
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .remove(KEY_DEVICE_ID)
+            .remove(KEY_DEVICE_TOKEN)
             .remove(KEY_COMMUNITY_ID)
             .remove(KEY_COMMUNITY_NAME)
             .remove(KEY_POLICY)

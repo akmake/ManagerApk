@@ -72,6 +72,7 @@ class JoinCommunityViewModel(app: Application) : AndroidViewModel(app) {
                         body.community!!.id,
                         body.community.name
                     )
+                    TetherPolicyManager.saveDeviceToken(context, body.deviceToken)
                     TetherPolicyManager.applyPolicy(context, body.community.policy)
                     _state.value = JoinState.Success(body.community.name)
                 } else {

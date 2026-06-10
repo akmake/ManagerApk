@@ -81,6 +81,7 @@ data class JoinCommunityRequest(
 
 data class JoinCommunityResponse(
     val success: Boolean,
+    val deviceToken: String?,   // one-time per-device secret — persist & send as X-Device-Token
     val device: TetherDevice?,
     val community: Community?,
     val message: String?
