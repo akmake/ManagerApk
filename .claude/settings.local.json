@@ -5,7 +5,11 @@
       "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' wait-for-device)",
       "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell ls -la /data/system/users/0/accounts.db)",
       "Bash('C:/Users/yosef dahan/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell which sqlite3)",
-      "PowerShell(& \"C:\\\\Users\\\\yosef dahan\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" devices)"
+      "PowerShell(& \"C:\\\\Users\\\\yosef dahan\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" devices)",
+      "Bash(JAVA_HOME=\"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\" ./gradlew assembleDebug --no-daemon)",
+      "PowerShell($env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; $env:GRADLE_OPTS = \"-Djava.net.preferIPv4Stack=true -Dorg.gradle.daemon=false\"; .\\\\gradlew.bat assembleDebug --console=plain 2>&1 | Select-Object -Last 50)",
+      "PowerShell(Write-Output \"=== hosts file localhost entries ===\"; Select-String -Path \"$env:SystemRoot\\\\System32\\\\drivers\\\\etc\\\\hosts\" -Pattern \"localhost\" -SimpleMatch | ForEach-Object { $_.Line }; Write-Output \"=== ping loopback ===\"; Test-NetConnection -ComputerName 127.0.0.1 -Port 0 -WarningAction SilentlyContinue -InformationLevel Quiet; Write-Output \"=== resolve localhost ===\"; try { [System.Net.Dns]::GetHostAddresses\\(\"localhost\"\\) | ForEach-Object { $_.IPAddressToString } } catch { $_.Exception.Message })",
+      "Bash(node --check routes/tetherRoutes.js)"
     ],
     "additionalDirectories": [
       "C:\\Users\\yosef dahan\\Documents\\GitHub\\sterni\\client\\src\\pages"

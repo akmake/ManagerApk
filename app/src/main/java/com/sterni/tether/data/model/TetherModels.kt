@@ -89,7 +89,9 @@ data class JoinCommunityResponse(
 
 /**
  * Returned by GET /devices/{deviceId}/policy.
- * [pendingCommands] contains commands queued by the admin (cleared after delivery).
+ * [pendingCommands] are queued by the admin and delivered at-least-once: the device executes
+ * each once (de-duped by [RemoteCommand.id]) and acks it via POST /commands/ack, after which
+ * the server stops resending it.
  */
 data class PolicyUpdateResponse(
     val policy: CommunityPolicy,
@@ -99,6 +101,7 @@ data class PolicyUpdateResponse(
 
 /** A command pushed from the admin dashboard to a specific device. */
 data class RemoteCommand(
+    @com.google.gson.annotations.SerializedName("_id") val id: String? = null, // server subdoc id — de-dupe & ack
     val type: String,   // SHOW_MESSAGE | FORCE_SYNC | RELEASE_ALL | APPROVAL_GRANTED
     val payload: String = ""
 )

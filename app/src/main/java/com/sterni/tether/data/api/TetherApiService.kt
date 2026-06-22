@@ -17,6 +17,9 @@ data class AppVersionResponse(val versionCode: Int, val versionName: String)
 data class VerifyPinRequest(val pin: String)
 data class VerifyPinResponse(val success: Boolean, val allowUninstall: Boolean)
 
+/** Ids of pendingCommands the device has executed; the server $pulls them so they aren't redelivered. */
+data class AckCommandsRequest(val ids: List<String>)
+
 /** Sent every 5 minutes by TetherWatchdogService. */
 data class HeartbeatRequest(
     val accessibilityEnabled: Boolean,
@@ -40,6 +43,13 @@ interface TetherApiService {
 
     @GET("tether/devices/{deviceId}/policy")
     suspend fun getPolicy(@Path("deviceId") deviceId: String): Response<PolicyUpdateResponse>
+
+    /** Acknowledge executed admin commands so the server stops redelivering them. */
+    @POST("tether/devices/{deviceId}/commands/ack")
+    suspend fun ackCommands(
+        @Path("deviceId") deviceId: String,
+        @Body request: AckCommandsRequest
+    ): Response<Any>
 
     @POST("tether/devices/{deviceId}/approval")
     suspend fun requestApproval(

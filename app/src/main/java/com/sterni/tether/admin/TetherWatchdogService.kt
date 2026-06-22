@@ -228,12 +228,34 @@ class TetherWatchdogService : Service() {
                 Log.i(TAG, "Fast sync: policy updated")
             }
 
+            // At-least-once command delivery: de-duplicate by id (shared with PolicySyncWorker)
+            // and ack executed ids so the server stops resending them.
+            val executedIds = mutableListOf<String>()
             for (command in body.pendingCommands) {
+                val id = command.id
+                if (id != null && TetherPolicyManager.isCommandProcessed(this, id)) continue
                 when (command.type) {
                     "FORCE_SYNC"   -> TetherPolicyManager.applyPolicy(this, policy)
-                    "RELEASE_ALL"  -> TetherPolicyManager.releaseAllAndUninstall(this, force = true)
+                    "RELEASE_ALL"  -> {
+                        // Same robust teardown as the 404 self-release path (un-suspends every app
+                        // BEFORE relinquishing Device Owner), then offers uninstall. Device is now
+                        // unenrolled — nothing left to sync or ack.
+                        TetherPolicyManager.releaseAllProtections(this)
+                        TetherPolicyManager.showUninstallNotification(this)
+                        return
+                    }
                     "SHOW_MESSAGE" -> if (command.payload.isNotBlank()) showAdminMessage(command.payload)
                     "APPROVAL_GRANTED" -> applyApprovalGrant(command.payload)
+                }
+                if (id != null) {
+                    TetherPolicyManager.markCommandProcessed(this, id)
+                    executedIds.add(id)
+                }
+            }
+            if (executedIds.isNotEmpty()) {
+                runCatching {
+                    RetrofitClient.create(TetherApiService::class.java)
+                        .ackCommands(deviceId, com.sterni.tether.data.api.AckCommandsRequest(executedIds))
                 }
             }
 
@@ -268,7 +290,7 @@ class TetherWatchdogService : Service() {
 
     private fun applyApprovalGrant(payload: String) {
         runCatching {
-            val obj = JsonParser.parseString(payload).asJsonObject
+            val obj = JsonParser().parse(payload).asJsonObject
             val packageName = obj.get("packageName")?.takeIf { !it.isJsonNull }?.asString?.trim().orEmpty()
             val expiresAt = obj.get("expiresAt")?.takeIf { !it.isJsonNull }?.asLong ?: 0L
             if (packageName.isNotBlank() && expiresAt > System.currentTimeMillis()) {

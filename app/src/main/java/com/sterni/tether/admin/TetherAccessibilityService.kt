@@ -20,6 +20,12 @@ class TetherAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val approvalCooldown = mutableMapOf<String, Long>()
 
+    // Throttles for the WhatsApp Status/Channels shield so a single visit can't spam
+    // GLOBAL_ACTION_HOME on every WINDOW_CONTENT_CHANGED tick (which felt like "all apps closing").
+    private var lastWhatsAppScanTs = 0L
+    private var lastWhatsAppActionTs = 0L
+    private var lastWhatsAppDebugTs = 0L
+
     private fun logEvent(type: String, packageName: String? = null) {
         val deviceId = TetherPolicyManager.getDeviceId(this) ?: return
         serviceScope.launch {
@@ -53,6 +59,28 @@ class TetherAccessibilityService : AccessibilityService() {
 
         // Exact popup text shown when WhatsApp Status/Channels are blocked (user-defined wording).
         private const val WHATSAPP_BLOCK_MESSAGE = "חסום בה וחסום בה דכלא בה"
+
+        // Shield throttles (ms).
+        private const val WHATSAPP_SCAN_COOLDOWN_MS = 300L    // max scan rate on noisy content-changes
+        private const val WHATSAPP_ACTION_COOLDOWN_MS = 1200L // min gap between two Home bounces
+        private const val WHATSAPP_DEBUG_COOLDOWN_MS = 4000L  // id-dump rate (on-device tuning aid)
+
+        // LANGUAGE-INDEPENDENT detection of WhatsApp's Status & Channels screens.
+        // We match WhatsApp's internal resource-id / class tokens (always English, for every
+        // UI language) instead of localized on-screen text. Key fact: WhatsApp "Channels" are
+        // internally called "newsletter". This avoids the previous bug where matching the words
+        // "Status"/"Channels" also hit the always-visible bottom-tab label and bounced the user
+        // out of WhatsApp entirely.
+        private val WHATSAPP_STATUS_CHANNEL_TOKENS = listOf(
+            "newsletter",        // Channels (internal name) — directory + channel view
+            "channel",           // channel-related views
+            "status_playback",   // watching a status (full-screen)
+            "my_status",         // Status section on the Updates tab
+            "status_list",
+            "status_recycler",
+            "status_row",
+            "status_grid"
+        )
 
         // Critical system packages that must NEVER be kicked/suspended by the real-time
         // whitelist backstop (mirrors the exclusions in TetherPolicyManager.applyAppSuspension).
@@ -203,23 +231,31 @@ class TetherAccessibilityService : AccessibilityService() {
             return
         }
 
-        // === Layer 5: WhatsApp Status & Channels Blocking ===
+        // === Layer 5: WhatsApp Status & Channels shield ===
         // Enabled either by admin policy OR by the local user-controlled shield (Settings toggle).
+        // Detection is language-independent (resource-id / class tokens), so it works for every
+        // UI language — see whatsAppStatusOrChannelMarker().
         if (pkg == "com.whatsapp") {
             val shieldOn = policy?.blockWhatsAppChannels == true ||
                     TetherPolicyManager.isWhatsAppShieldEnabled(this)
             if (!shieldOn) return
 
+            // Throttle the noisy content-change stream (state-changes always pass through, so
+            // tab switches / opening a status are still caught immediately).
+            if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED && !canScanWhatsApp()) return
+
             val root = rootInActiveWindow ?: return
             try {
-                // Detect "Status"/"Channels" section text only — NOT the always-visible
-                // "Updates" bottom-tab label, which would otherwise bounce the user out of
-                // WhatsApp entirely. These words appear only on the Updates page / channel view.
-                if (isOnStatusOrChannels(root)) {
-                    Log.w(TAG, "Blocking WhatsApp Status/Channels access")
-                    logEvent("BLOCKED_APP_OPENED", "com.whatsapp.channels")
-                    Toast.makeText(this, WHATSAPP_BLOCK_MESSAGE, Toast.LENGTH_LONG).show()
-                    performGlobalAction(GLOBAL_ACTION_HOME)
+                val marker = whatsAppStatusOrChannelMarker(event, root)
+                if (marker != null) {
+                    if (canActOnWhatsApp()) {
+                        Log.w(TAG, "Blocking WhatsApp Status/Channels access (marker=$marker)")
+                        logEvent("BLOCKED_APP_OPENED", "com.whatsapp.channels")
+                        Toast.makeText(this, WHATSAPP_BLOCK_MESSAGE, Toast.LENGTH_LONG).show()
+                        performGlobalAction(GLOBAL_ACTION_HOME)
+                    }
+                } else {
+                    debugDumpWhatsAppIds(root)
                 }
             } finally {
                 root.recycle()
@@ -228,13 +264,70 @@ class TetherAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun isOnStatusOrChannels(root: AccessibilityNodeInfo): Boolean {
-        val keywords = listOf("ערוצים", "Channels", "סטטוס", "Status")
-        return keywords.any { keyword ->
-            val nodes = root.findAccessibilityNodeInfosByText(keyword)
-            val found = nodes.isNotEmpty()
-            nodes.forEach { it.recycle() }
-            found
+    /**
+     * Returns a short marker string if the active WhatsApp window is the Status viewer or a
+     * Channel ("newsletter") screen, else null. LANGUAGE-INDEPENDENT: it inspects WhatsApp's
+     * internal resource-ids / class names (always English) rather than localized text, so it
+     * behaves the same in Hebrew, English, Arabic, etc.
+     */
+    private fun whatsAppStatusOrChannelMarker(event: AccessibilityEvent, root: AccessibilityNodeInfo): String? {
+        event.className?.toString()?.lowercase()?.let { cls ->
+            WHATSAPP_STATUS_CHANNEL_TOKENS.firstOrNull { cls.contains(it) }?.let { return "class:$it" }
+        }
+        return findStatusChannelMarker(root, 0)
+    }
+
+    private fun findStatusChannelMarker(node: AccessibilityNodeInfo?, depth: Int): String? {
+        if (node == null || depth > 25) return null
+        if (node.isVisibleToUser) {
+            node.viewIdResourceName?.lowercase()?.let { id ->
+                WHATSAPP_STATUS_CHANNEL_TOKENS.firstOrNull { id.contains(it) }?.let { return "id:$it" }
+            }
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findStatusChannelMarker(child, depth + 1)
+            child.recycle()
+            if (found != null) return found
+        }
+        return null
+    }
+
+    private fun canScanWhatsApp(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastWhatsAppScanTs < WHATSAPP_SCAN_COOLDOWN_MS) return false
+        lastWhatsAppScanTs = now
+        return true
+    }
+
+    private fun canActOnWhatsApp(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastWhatsAppActionTs < WHATSAPP_ACTION_COOLDOWN_MS) return false
+        lastWhatsAppActionTs = now
+        return true
+    }
+
+    /**
+     * On-device tuning aid: when the shield is on but nothing matched, log the visible WhatsApp
+     * resource-ids (throttled) so the real Status/Channel ids can be confirmed from logcat and
+     * locked into WHATSAPP_STATUS_CHANNEL_TOKENS if a particular WhatsApp build differs.
+     */
+    private fun debugDumpWhatsAppIds(root: AccessibilityNodeInfo) {
+        val now = System.currentTimeMillis()
+        if (now - lastWhatsAppDebugTs < WHATSAPP_DEBUG_COOLDOWN_MS) return
+        lastWhatsAppDebugTs = now
+        val ids = mutableListOf<String>()
+        collectVisibleIds(root, 0, ids)
+        if (ids.isNotEmpty()) Log.d(TAG, "WA visible ids: ${ids.distinct().take(40).joinToString()}")
+    }
+
+    private fun collectVisibleIds(node: AccessibilityNodeInfo?, depth: Int, out: MutableList<String>) {
+        if (node == null || depth > 25 || out.size > 60) return
+        if (node.isVisibleToUser) node.viewIdResourceName?.let { out.add(it.substringAfter("id/")) }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            collectVisibleIds(child, depth + 1, out)
+            child.recycle()
         }
     }
 

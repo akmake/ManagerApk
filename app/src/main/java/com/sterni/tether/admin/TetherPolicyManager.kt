@@ -38,6 +38,8 @@ object TetherPolicyManager {
     private const val KEY_WHATSAPP_SHIELD = "user_shield_whatsapp"          // local user toggle (not admin)
     private const val KEY_REVOKED_COUNT = "revoked_strike_count"            // consecutive "device deleted" responses
     private const val KEY_REVOKED_FIRST_TS = "revoked_first_ts"             // epoch ms of first strike
+    private const val KEY_PROCESSED_CMD_IDS = "processed_command_ids"        // CSV of executed command ids (dedupe)
+    private const val PROCESSED_CMD_CAP = 100                                // keep only the newest N ids
     private const val UNINSTALL_WINDOW_MS = 60 * 60 * 1000L              // 1 hour
     private const val CHANNEL_RELEASE = "tether_release"
     private const val NOTIF_ID_RELEASE = 3001
@@ -512,6 +514,27 @@ object TetherPolicyManager {
     // ── Server-driven self-release (the "iron link") ──────────────────────────
     // The device's enforcement state must strictly follow the server. If the server says
     // the device no longer exists, it must NOT stay locked forever.
+
+    // ── Admin-command de-duplication ──────────────────────────────────────────
+    // The server now delivers pendingCommands at-least-once (until acked) instead of clearing
+    // them on read. Both pollers (PolicySyncWorker + TetherWatchdogService) therefore receive
+    // the same commands; this id set guarantees each command runs once, even across the two
+    // pollers and process restarts.
+
+    fun isCommandProcessed(context: Context, id: String): Boolean {
+        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_PROCESSED_CMD_IDS, "") ?: ""
+        return raw.split(',').contains(id)
+    }
+
+    fun markCommandProcessed(context: Context, id: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val existing = (prefs.getString(KEY_PROCESSED_CMD_IDS, "") ?: "")
+            .split(',').filter { it.isNotBlank() }
+        if (existing.contains(id)) return
+        val merged = (existing + id).takeLast(PROCESSED_CMD_CAP)
+        prefs.edit().putString(KEY_PROCESSED_CMD_IDS, merged.joinToString(",")).apply()
+    }
 
     /** Reset the revoke-confirmation counter. Called on every successful policy fetch. */
     fun clearRevokedStrikes(context: Context) {

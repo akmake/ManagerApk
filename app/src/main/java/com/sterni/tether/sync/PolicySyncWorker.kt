@@ -85,16 +85,36 @@ class PolicySyncWorker(
                     }
                 }
 
-                // Execute pending commands from admin
+                // Execute pending commands from admin. The server delivers them at-least-once
+                // (until acked), so we de-duplicate by id across both pollers and restarts, then
+                // acknowledge the executed ids so the server stops resending them.
                 val commands = body?.pendingCommands ?: emptyList()
+                val executedIds = mutableListOf<String>()
                 for (command in commands) {
+                    val id = command.id
+                    if (id != null && TetherPolicyManager.isCommandProcessed(context, id)) continue
                     Log.i(TAG, "Executing command: ${command.type} payload=${command.payload}")
                     when (command.type) {
                         "SHOW_MESSAGE" -> showAdminMessage(context, command.payload)
                         "FORCE_SYNC"   -> if (policy != null) TetherPolicyManager.applyPolicy(context, policy)
-                        "RELEASE_ALL"  -> TetherPolicyManager.releaseAllAndUninstall(context, force = true)
+                        "RELEASE_ALL"  -> {
+                            // Same robust teardown as the 404 self-release path (un-suspends every
+                            // app BEFORE relinquishing Device Owner, clears all restrictions, wipes
+                            // enrollment), then offers uninstall. Device is now unenrolled — nothing
+                            // left to sync or ack.
+                            TetherPolicyManager.releaseAllProtections(context)
+                            TetherPolicyManager.showUninstallNotification(context)
+                            return Result.success()
+                        }
                         "APPROVAL_GRANTED" -> applyApprovalGrant(context, command.payload)
                     }
+                    if (id != null) {
+                        TetherPolicyManager.markCommandProcessed(context, id)
+                        executedIds.add(id)
+                    }
+                }
+                if (executedIds.isNotEmpty()) {
+                    runCatching { api.ackCommands(deviceId, com.sterni.tether.data.api.AckCommandsRequest(executedIds)) }
                 }
 
                 // allowUninstall=true from server starts a 1-hour local window (works offline too)
@@ -137,7 +157,7 @@ class PolicySyncWorker(
 
     private fun applyApprovalGrant(context: Context, payload: String) {
         runCatching {
-            val obj = JsonParser.parseString(payload).asJsonObject
+            val obj = JsonParser().parse(payload).asJsonObject
             val packageName = obj.get("packageName")?.takeIf { !it.isJsonNull }?.asString?.trim().orEmpty()
             val expiresAt = obj.get("expiresAt")?.takeIf { !it.isJsonNull }?.asLong ?: 0L
             if (packageName.isNotBlank() && expiresAt > System.currentTimeMillis()) {

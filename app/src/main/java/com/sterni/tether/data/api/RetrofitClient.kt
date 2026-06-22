@@ -13,15 +13,15 @@ object RetrofitClient {
     @Volatile private var deviceTokenProvider: () -> String? = { null }
     fun setDeviceTokenProvider(provider: () -> String?) { deviceTokenProvider = provider }
 
-    // Attaches X-Device-Token to device-facing endpoints only.
+    // Attaches X-Device-Token to device-facing endpoints only, and advertises support for
+    // per-command acknowledgement (X-Cmd-Ack) so the server delivers commands at-least-once.
     private val deviceAuthInterceptor = Interceptor { chain ->
         val req = chain.request()
-        val token = if (req.url.encodedPath.contains("/devices/")) deviceTokenProvider() else null
-        if (!token.isNullOrEmpty()) {
-            chain.proceed(req.newBuilder().header("X-Device-Token", token).build())
-        } else {
-            chain.proceed(req)
-        }
+        if (!req.url.encodedPath.contains("/devices/")) return@Interceptor chain.proceed(req)
+        val builder = req.newBuilder().header("X-Cmd-Ack", "1")
+        val token = deviceTokenProvider()
+        if (!token.isNullOrEmpty()) builder.header("X-Device-Token", token)
+        chain.proceed(builder.build())
     }
 
     private val client by lazy {
