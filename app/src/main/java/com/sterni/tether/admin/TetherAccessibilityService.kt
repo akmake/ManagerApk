@@ -5,6 +5,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.Toast
 import com.sterni.tether.data.api.RetrofitClient
 import com.sterni.tether.data.api.SecurityEventRequest
 import com.sterni.tether.data.api.TetherApiService
@@ -48,6 +49,29 @@ class TetherAccessibilityService : AccessibilityService() {
             "com.vivo.appstore",                // Vivo App Store
             "com.bbk.appstore",                 // BBK App Store
             "com.meizu.mstore"                  // Meizu App Store
+        )
+
+        // Exact popup text shown when WhatsApp Status/Channels are blocked (user-defined wording).
+        private const val WHATSAPP_BLOCK_MESSAGE = "חסום בה וחסום בה דכלא בה"
+
+        // Critical system packages that must NEVER be kicked/suspended by the real-time
+        // whitelist backstop (mirrors the exclusions in TetherPolicyManager.applyAppSuspension).
+        // Without this, opening the keyboard / dialer / system UI while not in allowedApps
+        // would bounce the user to Home and break basic device usage.
+        private val CRITICAL_SYSTEM_PACKAGES = setOf(
+            OUR_PACKAGE,
+            "com.android.settings",
+            "com.android.phone",
+            "com.android.server.telecom",
+            "com.android.systemui",
+            "com.android.dialer",
+            "com.samsung.android.dialer",
+            "com.google.android.dialer",
+            "com.google.android.inputmethod.latin",
+            "com.samsung.android.honeyboard",
+            "com.sec.android.app.launcher",
+            "com.google.android.apps.nexuslauncher",
+            "com.android.launcher3"
         )
 
         // APK installer packages — ALWAYS blocked regardless of policy
@@ -125,7 +149,10 @@ class TetherAccessibilityService : AccessibilityService() {
         val hasTempApproval = TetherPolicyManager.isAppTemporarilyAllowed(this, pkg)
 
         // === Layer 1: Block APK installer and newly installed apps ===
-        if ((pkg in PACKAGE_INSTALLER_PACKAGES || isNewUnapprovedApp(pkg)) && !hasTempApproval) {
+        // Installers are always blocked; the whitelist backstop skips critical system apps
+        // so the keyboard/dialer/launcher/settings keep working.
+        if ((pkg in PACKAGE_INSTALLER_PACKAGES ||
+                    (isNewUnapprovedApp(pkg) && pkg !in CRITICAL_SYSTEM_PACKAGES)) && !hasTempApproval) {
             if (policy == null || policy.blockApkInstall || !policy.allowedApps.contains(pkg)) {
                 Log.w(TAG, "Blocking unapproved package: $pkg")
                 logEvent("BLOCKED_APP_OPENED", pkg)
@@ -176,32 +203,38 @@ class TetherAccessibilityService : AccessibilityService() {
             return
         }
 
-        // === Layer 5: WhatsApp Channels Blocking (Special Logic) ===
+        // === Layer 5: WhatsApp Status & Channels Blocking ===
+        // Enabled either by admin policy OR by the local user-controlled shield (Settings toggle).
         if (pkg == "com.whatsapp") {
+            val shieldOn = policy?.blockWhatsAppChannels == true ||
+                    TetherPolicyManager.isWhatsAppShieldEnabled(this)
+            if (!shieldOn) return
+
             val root = rootInActiveWindow ?: return
             try {
-                val updatesTabs = root.findAccessibilityNodeInfosByText("עדכונים")
-                val updatesTabsEn = root.findAccessibilityNodeInfosByText("Updates")
-                val channelsText = root.findAccessibilityNodeInfosByText("ערוצים")
-                val channelsTextEn = root.findAccessibilityNodeInfosByText("Channels")
-
-                if (updatesTabs.isNotEmpty() || updatesTabsEn.isNotEmpty() ||
-                    channelsText.isNotEmpty() || channelsTextEn.isNotEmpty()) {
-                    if (policy?.blockWhatsAppChannels == true) {
-                        Log.w(TAG, "Blocking WhatsApp Channels access")
-                        logEvent("BLOCKED_APP_OPENED", "com.whatsapp.channels")
-                        performGlobalAction(GLOBAL_ACTION_BACK)
-                    }
+                // Detect "Status"/"Channels" section text only — NOT the always-visible
+                // "Updates" bottom-tab label, which would otherwise bounce the user out of
+                // WhatsApp entirely. These words appear only on the Updates page / channel view.
+                if (isOnStatusOrChannels(root)) {
+                    Log.w(TAG, "Blocking WhatsApp Status/Channels access")
+                    logEvent("BLOCKED_APP_OPENED", "com.whatsapp.channels")
+                    Toast.makeText(this, WHATSAPP_BLOCK_MESSAGE, Toast.LENGTH_LONG).show()
+                    performGlobalAction(GLOBAL_ACTION_HOME)
                 }
-
-                updatesTabs.forEach { it.recycle() }
-                updatesTabsEn.forEach { it.recycle() }
-                channelsText.forEach { it.recycle() }
-                channelsTextEn.forEach { it.recycle() }
             } finally {
                 root.recycle()
             }
             return
+        }
+    }
+
+    private fun isOnStatusOrChannels(root: AccessibilityNodeInfo): Boolean {
+        val keywords = listOf("ערוצים", "Channels", "סטטוס", "Status")
+        return keywords.any { keyword ->
+            val nodes = root.findAccessibilityNodeInfosByText(keyword)
+            val found = nodes.isNotEmpty()
+            nodes.forEach { it.recycle() }
+            found
         }
     }
 

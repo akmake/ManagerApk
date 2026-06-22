@@ -231,7 +231,8 @@ class TetherVpnService : VpnService() {
                     val upstream = InetAddress.getByName(resolver)
                     socket.send(DatagramPacket(query, query.size, upstream, 53))
                     socket.soTimeout = 3000
-                    val buf = ByteArray(512)
+                    // 4096 to avoid truncating EDNS0 / large DNS responses (512 was too small).
+                    val buf = ByteArray(4096)
                     val resp = DatagramPacket(buf, buf.size)
                     socket.receive(resp)
                     return@withContext buf.copyOf(resp.length)

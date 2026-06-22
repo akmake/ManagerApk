@@ -132,7 +132,7 @@ class PolicySyncWorker(
 
     private fun applyApprovalGrant(context: Context, payload: String) {
         runCatching {
-            val obj = JsonParser().parse(payload).asJsonObject
+            val obj = JsonParser.parseString(payload).asJsonObject
             val packageName = obj.get("packageName")?.takeIf { !it.isJsonNull }?.asString?.trim().orEmpty()
             val expiresAt = obj.get("expiresAt")?.takeIf { !it.isJsonNull }?.asLong ?: 0L
             if (packageName.isNotBlank() && expiresAt > System.currentTimeMillis()) {

@@ -19,6 +19,10 @@ import com.sterni.tether.data.model.CommunityPolicy
 
 import android.content.Intent
 import com.sterni.tether.data.model.WebFilterMode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 object TetherPolicyManager {
 
@@ -31,11 +35,15 @@ object TetherPolicyManager {
     private const val KEY_COMMUNITY_NAME = "community_name"
     private const val KEY_UNINSTALL_EXPIRES_AT = "uninstall_expires_at"  // epoch ms, 0 = no active window
     private const val KEY_TEMP_APP_APPROVALS = "temp_app_approvals"        // JSON: package -> expiry epoch ms
+    private const val KEY_WHATSAPP_SHIELD = "user_shield_whatsapp"          // local user toggle (not admin)
     private const val UNINSTALL_WINDOW_MS = 60 * 60 * 1000L              // 1 hour
     private const val CHANNEL_RELEASE = "tether_release"
     private const val NOTIF_ID_RELEASE = 3001
 
     private val gson = Gson()
+
+    // רקע לפעולות כבדות (החלת מדיניות) כדי לא לחסום את ה-thread של מי שקרא לנו
+    private val bgScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     fun isDeviceOwner(context: Context): Boolean {
         val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
@@ -294,6 +302,19 @@ object TetherPolicyManager {
 
     fun isEnrolled(context: Context): Boolean = getDeviceId(context) != null
 
+    /**
+     * מתג מקומי בשליטת המשתמש (לא המנהל): חסימת סטטוס וערוצים בוואטסאפ.
+     * נשמר במכשיר בלבד ועובד באופן עצמאי מהמדיניות שמגיעה מהשרת.
+     */
+    fun isWhatsAppShieldEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_WHATSAPP_SHIELD, false)
+
+    fun setWhatsAppShieldEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_WHATSAPP_SHIELD, enabled)
+            .apply()
+    }
+
     /** Starts a 1-hour local uninstall window. Works fully offline. */
     fun startUninstallWindow(context: Context) {
         val expiresAt = System.currentTimeMillis() + UNINSTALL_WINDOW_MS
@@ -398,7 +419,10 @@ object TetherPolicyManager {
         if (!changed) return
         saveTempApprovals(context, approvals)
         // Re-apply base policy to restore restrictions after expiry.
-        applyStoredPolicy(context)
+        // נריץ ברקע — הפונקציה הזו נקראת גם מה-thread הראשי של שירות הנגישות,
+        // ו-applyStoredPolicy סורקת את כל האפליקציות (פעולה כבדה).
+        val appContext = context.applicationContext
+        bgScope.launch { applyStoredPolicy(appContext) }
     }
 
     /**

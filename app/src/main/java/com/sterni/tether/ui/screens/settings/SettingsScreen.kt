@@ -41,6 +41,10 @@ fun SettingsScreen(
     val isDeviceOwner = TetherPolicyManager.isDeviceOwner(context)
     val isUninstallWindowOpen = remember { TetherPolicyManager.isUninstallWindowActive(context) }
 
+    var whatsappShield by remember {
+        mutableStateOf(TetherPolicyManager.isWhatsAppShieldEnabled(context))
+    }
+
     var showUninstallDialog by remember { mutableStateOf(false) }
     var enteredCode by remember { mutableStateOf("") }
     var codeError by remember { mutableStateOf(false) }
@@ -181,6 +185,20 @@ fun SettingsScreen(
             )
 
             Spacer(Modifier.height(24.dp))
+            SectionTitle("הגנה אישית")
+
+            ToggleRow(
+                icon = Icons.Default.Shield,
+                label = "מגן סטטוס וערוצים בוואטסאפ",
+                description = "חוסם כניסה לסטטוסים ולערוצים בוואטסאפ",
+                checked = whatsappShield,
+                onCheckedChange = {
+                    whatsappShield = it
+                    TetherPolicyManager.setWhatsAppShieldEnabled(context, it)
+                }
+            )
+
+            Spacer(Modifier.height(24.dp))
             SectionTitle("אודות")
 
             InfoRow(
@@ -289,6 +307,37 @@ private fun InfoRow(
         Spacer(Modifier.width(16.dp))
         Text(label, fontSize = 15.sp, fontFamily = HebrewFont, modifier = Modifier.weight(1f))
         Text(value, fontSize = 14.sp, fontFamily = HebrewFont, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+}
+
+@Composable
+private fun ToggleRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, fontSize = 15.sp, fontFamily = HebrewFont)
+            Text(
+                description,
+                fontSize = 12.sp,
+                fontFamily = HebrewFont,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 }
