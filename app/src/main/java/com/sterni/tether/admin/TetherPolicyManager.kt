@@ -36,9 +36,53 @@ object TetherPolicyManager {
     private const val KEY_UNINSTALL_EXPIRES_AT = "uninstall_expires_at"  // epoch ms, 0 = no active window
     private const val KEY_TEMP_APP_APPROVALS = "temp_app_approvals"        // JSON: package -> expiry epoch ms
     private const val KEY_WHATSAPP_SHIELD = "user_shield_whatsapp"          // local user toggle (not admin)
+    private const val KEY_REVOKED_COUNT = "revoked_strike_count"            // consecutive "device deleted" responses
+    private const val KEY_REVOKED_FIRST_TS = "revoked_first_ts"             // epoch ms of first strike
     private const val UNINSTALL_WINDOW_MS = 60 * 60 * 1000L              // 1 hour
     private const val CHANNEL_RELEASE = "tether_release"
     private const val NOTIF_ID_RELEASE = 3001
+
+    // Server must confirm "device deleted" (HTTP 404) across this many consecutive checks
+    // spanning at least REVOKED_MIN_DURATION_MS before we self-release — so a transient
+    // server outage (deploy / 5xx that some proxies surface as 404) can't unlock the fleet.
+    private const val REVOKED_STRIKES_REQUIRED = 3
+    private const val REVOKED_MIN_DURATION_MS = 3 * 60_000L
+
+    // Every user restriction this app may set — cleared in full on self-release.
+    private val ALL_MANAGED_RESTRICTIONS = listOf(
+        UserManager.DISALLOW_INSTALL_APPS,
+        UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
+        UserManager.DISALLOW_MODIFY_ACCOUNTS,
+        UserManager.DISALLOW_UNINSTALL_APPS,
+        UserManager.DISALLOW_SAFE_BOOT,
+        UserManager.DISALLOW_FACTORY_RESET,
+        UserManager.DISALLOW_USB_FILE_TRANSFER,
+        UserManager.DISALLOW_ADD_USER,
+        UserManager.DISALLOW_DEBUGGING_FEATURES,
+        UserManager.DISALLOW_APPS_CONTROL,
+        UserManager.DISALLOW_SYSTEM_ERROR_DIALOGS
+    )
+
+    // Stores / installers this app may have hidden — un-hidden in full on self-release.
+    private val HIDEABLE_PACKAGES = listOf(
+        "com.android.vending",
+        "com.google.android.gms.policy_sidecar_aps",
+        "com.android.packageinstaller",
+        "com.google.android.packageinstaller",
+        "com.android.managedprovisioning",
+        "com.sec.android.app.samsungapps",
+        "com.samsung.android.packageinstaller",
+        "com.samsung.android.app.installserv",
+        "com.sec.android.app.installserv",
+        "com.samsung.android.app.settings.bixby",
+        "com.miui.packageinstaller",
+        "com.coloros.packageinstaller",
+        "com.huawei.appmarket",
+        "com.amazon.venezia",
+        "com.xiaomi.market",
+        "com.oppo.market",
+        "com.vivo.appstore"
+    )
 
     private val gson = Gson()
 
@@ -463,6 +507,87 @@ object TetherPolicyManager {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to remove device admin: ${e.message}", e)
         }
+    }
+
+    // ── Server-driven self-release (the "iron link") ──────────────────────────
+    // The device's enforcement state must strictly follow the server. If the server says
+    // the device no longer exists, it must NOT stay locked forever.
+
+    /** Reset the revoke-confirmation counter. Called on every successful policy fetch. */
+    fun clearRevokedStrikes(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getInt(KEY_REVOKED_COUNT, 0) == 0) return
+        prefs.edit().remove(KEY_REVOKED_COUNT).remove(KEY_REVOKED_FIRST_TS).apply()
+    }
+
+    /**
+     * Called when GET /policy returns 404 — the admin deleted this device on the server.
+     * Releases the device only after the signal is CONFIRMED across several consecutive
+     * checks spanning at least a few minutes, guarding against transient server outages.
+     * @return true if a full release was performed.
+     */
+    fun onDeviceNotFound(context: Context): Boolean {
+        if (!isEnrolled(context)) return false   // already released / never enrolled
+
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        val count = prefs.getInt(KEY_REVOKED_COUNT, 0) + 1
+        val firstTs = prefs.getLong(KEY_REVOKED_FIRST_TS, 0L).let { if (it == 0L) now else it }
+        prefs.edit().putInt(KEY_REVOKED_COUNT, count).putLong(KEY_REVOKED_FIRST_TS, firstTs).apply()
+
+        val confirmed = count >= REVOKED_STRIKES_REQUIRED && (now - firstTs) >= REVOKED_MIN_DURATION_MS
+        Log.w(TAG, "Server reports device deleted (strike $count, age=${now - firstTs}ms, confirmed=$confirmed)")
+        if (!confirmed) return false
+
+        releaseAllProtections(context)
+        showUninstallNotification(context)
+        Log.w(TAG, "Device confirmed deleted on server — all protections released, uninstall offered")
+        return true
+    }
+
+    /**
+     * Full, robust self-release: un-suspends/un-hides every app, clears every user restriction,
+     * lifts the uninstall block & always-on VPN, relinquishes Device Owner, stops the VPN, and
+     * wipes local enrollment. Inverse of applyStoredPolicy. Safe to call when not Device Owner.
+     */
+    fun releaseAllProtections(context: Context) {
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+        try {
+            if (dpm.isDeviceOwnerApp(context.packageName)) {
+                // Un-suspend everything (suspended apps are still listed by PackageManager)
+                runCatching {
+                    val pkgs = context.packageManager.getInstalledApplications(0)
+                        .map { it.packageName }.toTypedArray()
+                    if (pkgs.isNotEmpty()) dpm.setPackagesSuspended(admin, pkgs, false)
+                }
+                // Un-hide stores / installers we may have hidden
+                HIDEABLE_PACKAGES.forEach { pkg ->
+                    runCatching { dpm.setApplicationHidden(admin, pkg, false) }
+                }
+                // Clear every user restriction we may have set
+                ALL_MANAGED_RESTRICTIONS.forEach { r ->
+                    runCatching { dpm.clearUserRestriction(admin, r) }
+                }
+                runCatching { dpm.setUninstallBlocked(admin, context.packageName, false) }
+                runCatching { dpm.setAlwaysOnVpnPackage(admin, null, false) }
+                runCatching { dpm.setLockTaskPackages(admin, emptyArray()) }
+                runCatching { dpm.clearDeviceOwnerApp(context.packageName) }
+                Log.i(TAG, "Self-release: Device Owner relinquished, all restrictions cleared")
+            } else if (dpm.isAdminActive(admin)) {
+                runCatching { dpm.removeActiveAdmin(admin) }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during releaseAllProtections: ${e.message}", e)
+        }
+
+        // Stop the VPN service
+        runCatching {
+            context.startService(Intent(context, TetherVpnService::class.java).apply { action = "STOP" })
+        }
+        // Wipe all local state: enrollment, policy, windows, approvals, user toggles, strikes
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+        Log.i(TAG, "Self-release complete — local state cleared")
     }
 
     fun releaseAllAndUninstall(context: Context, force: Boolean = false): Boolean {

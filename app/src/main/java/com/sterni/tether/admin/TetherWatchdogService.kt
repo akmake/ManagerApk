@@ -105,6 +105,10 @@ class TetherWatchdogService : Service() {
     }
 
     private fun runChecks() {
+        // Nothing to protect once the device is no longer enrolled (e.g. after a server-driven
+        // self-release). Stay idle instead of nagging "permissions lost" for an unmanaged device.
+        if (!TetherPolicyManager.isEnrolled(this)) return
+
         TetherPolicyManager.cleanupExpiredTemporaryApprovals(this)
 
         val accessibilityOk = isAccessibilityEnabled()
@@ -207,7 +211,14 @@ class TetherWatchdogService : Service() {
         val deviceId = TetherPolicyManager.getDeviceId(this) ?: return
         try {
             val response = RetrofitClient.create(TetherApiService::class.java).getPolicy(deviceId)
-            if (!response.isSuccessful) return
+            if (!response.isSuccessful) {
+                // 404 = admin deleted this device on the server. Confirmed self-release happens
+                // inside onDeviceNotFound after several consecutive strikes (iron link).
+                if (response.code() == 404) TetherPolicyManager.onDeviceNotFound(this)
+                return
+            }
+            // Successful fetch = device still exists → reset the revoke-confirmation counter.
+            TetherPolicyManager.clearRevokedStrikes(this)
             val body = response.body() ?: return
 
             val policy = body.policy
@@ -257,7 +268,7 @@ class TetherWatchdogService : Service() {
 
     private fun applyApprovalGrant(payload: String) {
         runCatching {
-            val obj = JsonParser().parse(payload).asJsonObject
+            val obj = JsonParser.parseString(payload).asJsonObject
             val packageName = obj.get("packageName")?.takeIf { !it.isJsonNull }?.asString?.trim().orEmpty()
             val expiresAt = obj.get("expiresAt")?.takeIf { !it.isJsonNull }?.asLong ?: 0L
             if (packageName.isNotBlank() && expiresAt > System.currentTimeMillis()) {

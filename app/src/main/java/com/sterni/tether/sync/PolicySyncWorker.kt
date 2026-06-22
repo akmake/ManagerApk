@@ -73,6 +73,8 @@ class PolicySyncWorker(
             }
 
             if (response.isSuccessful) {
+                // Successful fetch = device still exists → reset the revoke-confirmation counter.
+                TetherPolicyManager.clearRevokedStrikes(context)
                 val body = response.body()
                 val policy = body?.policy
                 if (policy != null) {
@@ -105,6 +107,9 @@ class PolicySyncWorker(
                 Result.success()
             } else {
                 Log.w(TAG, "Policy fetch failed: " + response.code())
+                // 404 = admin deleted this device on the server. Confirmed self-release happens
+                // inside onDeviceNotFound after several consecutive strikes (iron link).
+                if (response.code() == 404) TetherPolicyManager.onDeviceNotFound(context)
                 Result.retry()
             }
         } catch (e: Exception) {
