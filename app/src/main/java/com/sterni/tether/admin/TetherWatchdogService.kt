@@ -105,6 +105,10 @@ class TetherWatchdogService : Service() {
     }
 
     private fun runChecks() {
+        // Nothing to protect once the device is no longer enrolled (e.g. after a server-driven
+        // self-release). Stay idle instead of nagging "permissions lost" for an unmanaged device.
+        if (!TetherPolicyManager.isEnrolled(this)) return
+
         TetherPolicyManager.cleanupExpiredTemporaryApprovals(this)
 
         val accessibilityOk = isAccessibilityEnabled()
