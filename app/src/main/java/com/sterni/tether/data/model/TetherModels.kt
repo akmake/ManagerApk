@@ -30,6 +30,7 @@ data class CommunityPolicy(
     val blockFactoryReset: Boolean = true,
     val blockUsbTransfer: Boolean = false,
     val maxInstalledApps: Int? = null,
+    val appPolicyMode: AppPolicyMode = AppPolicyMode.BLACKLIST, // BLACKLIST: allow all but blockedApps; WHITELIST: only allowedApps run
     val allowedApps: List<String> = emptyList(),
     val blockedApps: List<String> = emptyList(),
     val appTimeLocks: List<AppTimeLock> = emptyList(),
@@ -62,6 +63,14 @@ enum class BlockedActionBehavior { SILENT, SHOW_MESSAGE, REQUEST_APPROVAL }
 enum class ApprovalResolverMode { OWNER_ONLY, SUPERADMIN_ONLY, OWNER_OR_SUPERADMIN }
 
 enum class WebFilterMode { NONE, BLACKLIST, WHITELIST }
+
+/**
+ * How [CommunityPolicy.allowedApps] / [CommunityPolicy.blockedApps] are enforced:
+ *  - BLACKLIST (default): every app runs except [CommunityPolicy.blockedApps] (+ installers/stores
+ *    per the boolean flags + time-locks). [allowedApps] acts as force-allow exceptions.
+ *  - WHITELIST (kiosk): only [allowedApps] (and critical system apps) run; everything else is blocked.
+ */
+enum class AppPolicyMode { BLACKLIST, WHITELIST }
 
 data class TetherDevice(
     val id: String,

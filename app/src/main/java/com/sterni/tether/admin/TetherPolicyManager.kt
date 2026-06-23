@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.sterni.tether.R
+import com.sterni.tether.data.model.AppPolicyMode
 import com.sterni.tether.data.model.AppTimeLock
 import com.sterni.tether.data.model.BlockedActionBehavior
 import com.sterni.tether.data.model.CommunityPolicy
@@ -112,9 +113,11 @@ object TetherPolicyManager {
         }
 
         try {
-            // הגדרת האפליקציה כ-Whitelisted ל-Lock Task Mode
+            // Lock Task (single-app kiosk pin) is intentionally NOT used — pinning to Tether-only
+            // bricked the device. Clear any previously-set lock-task allowlist so the device can
+            // never be pinned to Tether again. (See MainActivity, which also calls stopLockTask.)
             if (dpm.isDeviceOwnerApp(context.packageName)) {
-                dpm.setLockTaskPackages(admin, arrayOf(context.packageName))
+                dpm.setLockTaskPackages(admin, emptyArray())
             }
 
             // הגנה קיצונית: חסימת הסרה ברמת מערכת
@@ -136,10 +139,14 @@ object TetherPolicyManager {
             val timeLockActive = policy.lockedUntilTs != null && policy.lockedUntilTs > now
             val temporaryAllowed = getActiveTemporaryApprovedPackages(context)
             val effectiveAllowed = (policy.allowedApps + temporaryAllowed).distinct()
-            
-            // חשוב: אם יש נעילת זמן פעילה, לא משנה מה ה-allowedApps, הכל חסום (חוץ מחייגן)
-            // אם אין נעילה, אנחנו מחילים את החסימות הרגילות.
-            applyAppSuspension(dpm, context, if (timeLockActive) emptyList() else effectiveAllowed, policy.blockedApps, policy.maxInstalledApps)
+
+            // חשוב: אם יש נעילת זמן פעילה, לא משנה מה ה-allowedApps, הכל חסום (חוץ מחייגן).
+            // נעילה גורפת = WHITELIST עם רשימה ריקה, ללא תלות ב-appPolicyMode. אחרת מחילים את המצב.
+            // ?: guards against an older cached/server policy whose JSON omits the field (Gson
+            // bypasses Kotlin defaults → null), which would otherwise crash the when() below.
+            val effectiveMode = if (timeLockActive) AppPolicyMode.WHITELIST
+                                else (policy.appPolicyMode ?: AppPolicyMode.BLACKLIST)
+            applyAppSuspension(dpm, context, if (timeLockActive) emptyList() else effectiveAllowed, policy.blockedApps, policy.maxInstalledApps, effectiveMode)
 
             applyHiddenApps(dpm, context, policy.hideGooglePlay, policy.blockAllStores, policy.blockedApps)
             applyAntiBypassRestrictions(dpm, context, true)
@@ -719,7 +726,8 @@ object TetherPolicyManager {
         context: Context,
         allowedApps: List<String>,
         blockedApps: List<String>,
-        maxInstalledApps: Int?
+        maxInstalledApps: Int?,
+        mode: AppPolicyMode
     ) {
         val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
         try {
@@ -768,8 +776,13 @@ object TetherPolicyManager {
                     continue
                 }
                 
-                // 2. לוגיקת Whitelist
-                if (allowedApps.contains(pkg) && !blockedApps.contains(pkg)) {
+                // 2. לוגיקת אכיפה לפי מצב:
+                //    WHITELIST = רק allowedApps מותרות; BLACKLIST = הכל מותר חוץ מ-blockedApps.
+                val allow = when (mode) {
+                    AppPolicyMode.WHITELIST -> allowedApps.contains(pkg) && !blockedApps.contains(pkg)
+                    AppPolicyMode.BLACKLIST -> !blockedApps.contains(pkg)
+                }
+                if (allow) {
                     toRelease.add(pkg)
                     allowedCandidates.add(pkg)
                     dpm.setApplicationHidden(admin, pkg, false)

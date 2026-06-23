@@ -9,6 +9,7 @@ import android.widget.Toast
 import com.sterni.tether.data.api.RetrofitClient
 import com.sterni.tether.data.api.SecurityEventRequest
 import com.sterni.tether.data.api.TetherApiService
+import com.sterni.tether.data.model.AppPolicyMode
 import com.sterni.tether.data.model.BlockedActionBehavior
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -161,13 +162,6 @@ class TetherAccessibilityService : AccessibilityService() {
         Log.i(TAG, "Accessibility service connected")
     }
 
-    private fun isNewUnapprovedApp(packageName: String): Boolean {
-        val policy = TetherPolicyManager.loadPolicy(this) ?: return true
-        // If it's not in the allowed list and not a critical system app, it's "unapproved"
-        // We consider it "new" if it's currently being interacted with but not allowed
-        return !policy.allowedApps.contains(packageName)
-    }
-
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (TetherPolicyManager.isUninstallWindowActive(this)) return
 
@@ -176,13 +170,26 @@ class TetherAccessibilityService : AccessibilityService() {
         val blockedBehavior = policy?.blockedActionBehavior ?: BlockedActionBehavior.SILENT
         val hasTempApproval = TetherPolicyManager.isAppTemporarilyAllowed(this, pkg)
 
-        // === Layer 1: Block APK installer and newly installed apps ===
-        // Installers are always blocked; the whitelist backstop skips critical system apps
-        // so the keyboard/dialer/launcher/settings keep working.
-        if ((pkg in PACKAGE_INSTALLER_PACKAGES ||
-                    (isNewUnapprovedApp(pkg) && pkg !in CRITICAL_SYSTEM_PACKAGES)) && !hasTempApproval) {
-            if (policy == null || policy.blockApkInstall || !policy.allowedApps.contains(pkg)) {
-                Log.w(TAG, "Blocking unapproved package: $pkg")
+        // === Layer 1: APK installers — ALWAYS blocked, independent of app mode ===
+        if (pkg in PACKAGE_INSTALLER_PACKAGES && !hasTempApproval) {
+            Log.w(TAG, "Blocking APK installer: $pkg")
+            logEvent("BLOCKED_APP_OPENED", pkg)
+            maybeRequestApproval(pkg, blockedBehavior)
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            return
+        }
+
+        // === Layer 1b: App-access enforcement (mode-aware) ===
+        // BLACKLIST (default): only blockedApps are bounced — every other app runs normally.
+        // WHITELIST (kiosk):   only allowedApps (and critical system apps) run; the rest are bounced.
+        // Critical system apps (keyboard/dialer/launcher/settings/us) are never bounced, so the
+        // device stays usable. With no policy yet we behave as BLACKLIST (don't brick the device).
+        if (pkg !in CRITICAL_SYSTEM_PACKAGES && !hasTempApproval && policy != null) {
+            val blockedByList = policy.blockedApps.contains(pkg)
+            val blockedByWhitelist = policy.appPolicyMode == AppPolicyMode.WHITELIST &&
+                    !policy.allowedApps.contains(pkg)
+            if (blockedByList || blockedByWhitelist) {
+                Log.w(TAG, "Blocking app (${policy.appPolicyMode}): $pkg")
                 logEvent("BLOCKED_APP_OPENED", pkg)
                 maybeRequestApproval(pkg, blockedBehavior)
                 performGlobalAction(GLOBAL_ACTION_HOME)
@@ -194,8 +201,8 @@ class TetherAccessibilityService : AccessibilityService() {
                         dpm.setPackagesSuspended(admin, arrayOf(pkg), true)
                     } catch (_: Exception) {}
                 }
+                return
             }
-            return
         }
 
         // === Layer 2: Block app stores when any relevant policy flag is set ===

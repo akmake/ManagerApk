@@ -20,14 +20,19 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val dpm = getSystemService(DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
-        
-        // הפעלת Lock Task Mode אם אנחנו Device Owner
+
+        // CRITICAL: never pin the device to Tether. A previous version called startLockTask() while
+        // only com.sterni.tether was lock-task-allowed, which put every Device-Owner device into
+        // single-app kiosk mode — the user was locked inside Tether and EVERY other app was blocked
+        // ("kicks me out of all apps"). App restrictions are enforced by the policy
+        // (BLACKLIST/WHITELIST) + accessibility + DPM suspension, NEVER by pinning.
+        // Actively leave lock-task mode in case this device was pinned by an older build.
         if (dpm.isDeviceOwnerApp(packageName)) {
             try {
-                startLockTask()
-                android.util.Log.i("MainActivity", "Lock Task Mode started")
+                stopLockTask()
+                android.util.Log.i("MainActivity", "Lock Task Mode cleared")
             } catch (e: Exception) {
-                android.util.Log.e("MainActivity", "Failed to start Lock Task Mode", e)
+                android.util.Log.e("MainActivity", "stopLockTask failed", e)
             }
         }
 

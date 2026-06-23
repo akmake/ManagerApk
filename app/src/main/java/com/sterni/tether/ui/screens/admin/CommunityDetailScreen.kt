@@ -772,6 +772,37 @@ private fun PolicyTab(
                 }
             }
 
+            // ── Section: אפליקציות (מצב רשימה שחורה / לבנה) ──
+            item {
+                PolicySectionCard(title = "אפליקציות", icon = Icons.Default.Apps) {
+                    AppPolicyMode.values().forEach { mode ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            RadioButton(
+                                selected = edited.appPolicyMode == mode,
+                                onClick = { edited = edited.copy(appPolicyMode = mode) }
+                            )
+                            Column(Modifier.padding(start = 4.dp)) {
+                                Text(
+                                    text = when (mode) {
+                                        AppPolicyMode.BLACKLIST -> "רשימה שחורה — חסום אפליקציות ספציפיות"
+                                        AppPolicyMode.WHITELIST -> "רשימה לבנה — אפשר רק אפליקציות מאושרות"
+                                    },
+                                    fontSize = 14.sp
+                                )
+                                if (mode == AppPolicyMode.WHITELIST) {
+                                    Text("מצב קיוסק — כל שאר האפליקציות חסומות",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // ── Section 4: סינון אינטרנט ──
             item {
                 PolicySectionCard(title = "סינון אינטרנט", icon = Icons.Default.Language) {
