@@ -58,6 +58,13 @@ class TetherAccessibilityService : AccessibilityService() {
             "com.meizu.mstore"                  // Meizu App Store
         )
 
+        // Both WhatsApp variants share the same engine, Status/Channels features and internal
+        // resource-ids — only the package name differs. The shield must cover both.
+        private val WHATSAPP_PACKAGES = setOf(
+            "com.whatsapp",      // regular WhatsApp
+            "com.whatsapp.w4b"   // WhatsApp Business
+        )
+
         // Exact popup text shown when WhatsApp Status/Channels are blocked (user-defined wording).
         private const val WHATSAPP_BLOCK_MESSAGE = "חסום בה וחסום בה דכלא בה"
 
@@ -241,8 +248,8 @@ class TetherAccessibilityService : AccessibilityService() {
         // === Layer 5: WhatsApp Status & Channels shield ===
         // Enabled either by admin policy OR by the local user-controlled shield (Settings toggle).
         // Detection is language-independent (resource-id / class tokens), so it works for every
-        // UI language — see whatsAppStatusOrChannelMarker().
-        if (pkg == "com.whatsapp") {
+        // UI language — see whatsAppStatusOrChannelMarker(). Covers WhatsApp + WhatsApp Business.
+        if (pkg in WHATSAPP_PACKAGES) {
             val shieldOn = policy?.blockWhatsAppChannels == true ||
                     TetherPolicyManager.isWhatsAppShieldEnabled(this)
             if (!shieldOn) return
