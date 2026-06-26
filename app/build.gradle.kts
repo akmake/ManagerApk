@@ -116,6 +116,16 @@ dependencies {
     // KosherJava (Jewish Calendar)
     implementation("com.kosherjava:zmanim:2.5.0")
 
+    // Google Play Services Location (Jerusalem-direction compass, zmanim auto-city, geofencing)
+    implementation("com.google.android.gms:play-services-location:21.2.0")
+
+    // Google Maps + Compose (silent-zones map picker)
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.maps.android:maps-compose:4.3.3")
+
+    // PDFBox Android (local PDF text extraction for articles)
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+
     // LocalBroadcastManager
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 

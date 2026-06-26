@@ -22,6 +22,17 @@ import com.sterni.tether.ui.screens.news.NewsScreen
 import com.sterni.tether.ui.screens.onboarding.OnboardingScreen
 import com.sterni.tether.ui.screens.settings.SettingsScreen
 import com.sterni.tether.ui.screens.store.StoreScreen
+import com.sterni.tether.ui.screens.study.StudyDetailScreen
+import com.sterni.tether.ui.screens.zmanim.ZmanimScreen
+import com.sterni.tether.ui.screens.tools.ToolsScreen
+import com.sterni.tether.ui.screens.tools.JerusalemDirectionScreen
+import com.sterni.tether.ui.screens.location.LocationZoneScreen
+import com.sterni.tether.ui.screens.appblocker.AppBlockerScreen
+import com.sterni.tether.ui.screens.tefila.TefilaScreen
+import com.sterni.tether.ui.screens.mamaarim.MamaarimScreen
+import com.sterni.tether.ui.screens.mamaarim.MamaarReaderScreen
+import com.sterni.tether.ui.screens.mamaarim.ArticleUploadScreen
+import com.sterni.tether.ui.screens.pdflibrary.PdfStudyScreen
 import com.sterni.tether.ui.screens.splash.SplashScreen
 
 sealed class Screen(val route: String) {
@@ -41,10 +52,26 @@ sealed class Screen(val route: String) {
         fun createRoute(name: String) = "enrollment_success/${encode(name)}"
     }
     object Home     : Screen("home")
+    object StudyDetail : Screen("study/{studyKey}/{date}/{title}/{label}") {
+        fun createRoute(studyKey: String, date: String, title: String, label: String) =
+            "study/$studyKey/${encode(date)}/${encode(title)}/${encode(label)}"
+    }
     object Store    : Screen("store")
     object Calendar : Screen("calendar")
     object News     : Screen("news")
     object Settings : Screen("settings")
+    object Zmanim   : Screen("zmanim")
+    object Tools    : Screen("tools")
+    object JerusalemDir : Screen("jerusalemDirection")
+    object LocationZones : Screen("locationZones")
+    object AppBlocker : Screen("appBlocker")
+    object Tefila   : Screen("tefila")
+    object Mamaarim : Screen("mamaarim")
+    object MamaarReader : Screen("mamaarReader/{id}") {
+        fun createRoute(id: String) = "mamaarReader/$id"
+    }
+    object ArticleUpload : Screen("articleUpload")
+    object PdfLibrary : Screen("pdfLibrary")
     object Emergency: Screen("emergency")
 }
 
@@ -160,16 +187,41 @@ fun NavGraph(
         }
 
         composable(Screen.Home.route) {
-            val communityName = TetherPolicyManager.getCommunityName(context) ?: "Tether"
-            val isDeviceOwner = TetherPolicyManager.isDeviceOwner(context)
             HomeScreen(
-                communityName = communityName,
-                isDeviceOwner = isDeviceOwner,
-                onCalendarClick  = { navController.navigate(Screen.Calendar.route) },
-                onNewsClick      = { navController.navigate(Screen.News.route) },
-                onSettingsClick  = { navController.navigate(Screen.Settings.route) },
-                onStoreClick     = { navController.navigate(Screen.Store.route) },
-                onEnterAdmin     = onEnterAdmin
+                onStudyClick      = { studyKey, date, title, label ->
+                    navController.navigate(Screen.StudyDetail.createRoute(studyKey, date, title, label))
+                },
+                onZmanimClick     = { navController.navigate(Screen.Zmanim.route) },
+                onNewsClick       = { navController.navigate(Screen.News.route) },
+                onCalendarClick   = { navController.navigate(Screen.Calendar.route) },
+                onSettingsClick   = { navController.navigate(Screen.Settings.route) },
+                onMamaarimClick   = { navController.navigate(Screen.Mamaarim.route) },
+                onTefilaClick     = { navController.navigate(Screen.Tefila.route) },
+                onPdfLibraryClick = { navController.navigate(Screen.PdfLibrary.route) },
+                onToolsClick      = { navController.navigate(Screen.Tools.route) },
+                onEnterAdmin      = onEnterAdmin
+            )
+        }
+
+        composable(
+            route = Screen.StudyDetail.route,
+            arguments = listOf(
+                navArgument("studyKey") { type = NavType.StringType },
+                navArgument("date")     { type = NavType.StringType },
+                navArgument("title")    { type = NavType.StringType },
+                navArgument("label")    { type = NavType.StringType }
+            )
+        ) { back ->
+            val studyKey = back.arguments?.getString("studyKey") ?: return@composable
+            val date     = decode(back.arguments?.getString("date") ?: "")
+            val title    = decode(back.arguments?.getString("title") ?: "")
+            val label    = decode(back.arguments?.getString("label") ?: "")
+            StudyDetailScreen(
+                studyKey = studyKey,
+                date     = date,
+                title    = title,
+                label    = label,
+                onBack   = { navController.popBackStack() }
             )
         }
 
@@ -194,6 +246,67 @@ fun NavGraph(
 
         composable(Screen.Emergency.route) {
             com.sterni.tether.ui.screens.emergency.EmergencyCodeScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Zmanim.route) {
+            ZmanimScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Tools.route) {
+            ToolsScreen(
+                onBack              = { navController.popBackStack() },
+                onTefilaClick       = { navController.navigate(Screen.Tefila.route) },
+                onJerusalemDirClick = { navController.navigate(Screen.JerusalemDir.route) },
+                onSilentZoneClick   = { navController.navigate(Screen.LocationZones.route) },
+                onAppBlockerClick   = { navController.navigate(Screen.AppBlocker.route) },
+                onMamaarimClick     = { navController.navigate(Screen.Mamaarim.route) }
+            )
+        }
+
+        composable(Screen.JerusalemDir.route) {
+            JerusalemDirectionScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.LocationZones.route) {
+            LocationZoneScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.AppBlocker.route) {
+            AppBlockerScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Tefila.route) {
+            TefilaScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Mamaarim.route) {
+            MamaarimScreen(
+                onBack   = { navController.popBackStack() },
+                onOpen   = { id -> navController.navigate(Screen.MamaarReader.createRoute(id)) },
+                onUpload = { navController.navigate(Screen.ArticleUpload.route) }
+            )
+        }
+
+        composable(
+            route = Screen.MamaarReader.route,
+            arguments = listOf(navArgument("id") { type = NavType.StringType })
+        ) { back ->
+            val id = back.arguments?.getString("id") ?: return@composable
+            MamaarReaderScreen(
+                mamaarId = id,
+                onBack   = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.ArticleUpload.route) {
+            ArticleUploadScreen(
+                onBack    = { navController.popBackStack() },
+                onSuccess = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.PdfLibrary.route) {
+            PdfStudyScreen(onBack = { navController.popBackStack() })
         }
     }
 }

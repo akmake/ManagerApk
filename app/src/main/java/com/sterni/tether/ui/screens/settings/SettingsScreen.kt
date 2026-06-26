@@ -3,10 +3,13 @@ package com.sterni.tether.ui.screens.settings
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.People
@@ -16,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -26,7 +30,12 @@ import com.sterni.tether.BuildConfig
 import com.sterni.tether.admin.TetherPolicyManager
 import com.sterni.tether.admin.UninstallPinVerifier
 import com.sterni.tether.admin.UninstallVerificationResult
-import com.sterni.tether.ui.theme.HebrewFont
+import com.sterni.tether.ui.theme.BaHaYetzira
+import com.sterni.tether.ui.theme.SblHebrew
+import com.sterni.tether.ui.theme.Muted
+import com.sterni.tether.ui.theme.Ink
+import com.sterni.tether.ui.theme.LineColor
+import com.sterni.tether.ui.theme.Primary
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,10 +68,10 @@ fun SettingsScreen(
                 codeError = false
                 isVerifying = false
             },
-            title = { Text("אימות זהות", fontFamily = HebrewFont) },
+            title = { Text("אימות זהות", fontFamily = BaHaYetzira, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("הזן קוד אישי לפתיחת חלון הסרה זמני:", fontFamily = HebrewFont)
+                    Text("הזן קוד אישי לפתיחת חלון הסרה זמני:", fontFamily = SblHebrew)
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = enteredCode,
@@ -70,12 +79,12 @@ fun SettingsScreen(
                             enteredCode = it
                             codeError = false
                         },
-                        label = { Text("קוד", fontFamily = HebrewFont) },
+                        label = { Text("קוד", fontFamily = SblHebrew) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         visualTransformation = PasswordVisualTransformation(),
                         isError = codeError,
                         supportingText = if (codeError) {
-                            { Text("קוד שגוי או הרשאה לא זמינה", fontFamily = HebrewFont, color = MaterialTheme.colorScheme.error) }
+                            { Text("קוד שגוי או הרשאה לא זמינה", fontFamily = SblHebrew, color = MaterialTheme.colorScheme.error) }
                         } else null,
                         singleLine = true,
                         enabled = !isVerifying,
@@ -121,7 +130,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onError
                         )
                     } else {
-                        Text("פתח חלון הסרה", fontFamily = HebrewFont)
+                        Text("פתח חלון הסרה", fontFamily = SblHebrew)
                     }
                 }
             },
@@ -132,7 +141,7 @@ fun SettingsScreen(
                     codeError = false
                     isVerifying = false
                 }) {
-                    Text("ביטול", fontFamily = HebrewFont)
+                    Text("ביטול", fontFamily = SblHebrew)
                 }
             }
         )
@@ -143,136 +152,164 @@ fun SettingsScreen(
             onDismissRequest = { statusMessage = null },
             confirmButton = {
                 TextButton(onClick = { statusMessage = null }) {
-                    Text("אישור", fontFamily = HebrewFont)
+                    Text("אישור", fontFamily = SblHebrew)
                 }
             },
-            title = { Text("עדכון", fontFamily = HebrewFont) },
-            text = { Text(message, fontFamily = HebrewFont) }
+            title = { Text("עדכון", fontFamily = BaHaYetzira, fontWeight = FontWeight.Bold) },
+            text = { Text(message, fontFamily = SblHebrew) }
         )
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text("הגדרות", fontFamily = HebrewFont) },
+            CenterAlignedTopAppBar(
+                title = { Text("מרכז הגנה", fontFamily = BaHaYetzira, fontWeight = FontWeight.Bold, fontSize = 22.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowForward, "חזרה")
+                        Icon(Icons.Default.ArrowForward, "חזרה", tint = Ink)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 24.dp),
+            contentPadding = PaddingValues(bottom = 32.dp)
         ) {
-            Spacer(Modifier.height(8.dp))
+            item { Spacer(Modifier.height(16.dp)) }
 
-            SectionTitle("מכשיר זה")
+            item { SectionTitle("מכשיר זה") }
 
-            InfoRow(
-                icon = Icons.Default.People,
-                label = "קהילה",
-                value = communityName
-            )
-            InfoRow(
-                icon = Icons.Default.Shield,
-                label = "רמת הגנה",
-                value = if (isDeviceOwner) "הגנה מלאה (Tether)" else "הגנה חלקית"
-            )
+            item {
+                InfoRow(
+                    icon = Icons.Default.People,
+                    label = "קהילה",
+                    value = communityName
+                )
+            }
+            item {
+                InfoRow(
+                    icon = Icons.Default.Shield,
+                    label = "רמת הגנה",
+                    value = if (isDeviceOwner) "הגנה מלאה (Tether)" else "הגנה חלקית"
+                )
+            }
 
-            Spacer(Modifier.height(24.dp))
-            SectionTitle("הגנה אישית")
+            item { Spacer(Modifier.height(28.dp)) }
+            item { SectionTitle("הגנה אישית") }
 
-            ToggleRow(
-                icon = Icons.Default.Shield,
-                label = "מגן סטטוס וערוצים בוואטסאפ",
-                description = "חוסם כניסה לסטטוסים ולערוצים בוואטסאפ",
-                checked = whatsappShield,
-                onCheckedChange = {
-                    whatsappShield = it
-                    TetherPolicyManager.setWhatsAppShieldEnabled(context, it)
-                }
-            )
+            item {
+                ToggleRow(
+                    icon = Icons.Default.Shield,
+                    label = "מגן סטטוס וערוצים בוואטסאפ",
+                    description = "חוסם כניסה לסטטוסים ולערוצים בוואטסאפ",
+                    checked = whatsappShield,
+                    onCheckedChange = {
+                        whatsappShield = it
+                        TetherPolicyManager.setWhatsAppShieldEnabled(context, it)
+                    }
+                )
+            }
 
-            Spacer(Modifier.height(24.dp))
-            SectionTitle("אודות")
+            item { Spacer(Modifier.height(28.dp)) }
+            item { SectionTitle("תמיכה וניהול") }
 
-            InfoRow(
-                icon = Icons.Default.Info,
-                label = "גרסה",
-                value = BuildConfig.VERSION_NAME
-            )
+            item {
+                SettingsButton(
+                    icon = Icons.Default.Mail,
+                    label = "צור קשר עם המנהל",
+                    onClick = { /* TODO */ }
+                )
+            }
 
-            Spacer(Modifier.height(24.dp))
-            SectionTitle("תמיכה")
+            item {
+                SettingsButton(
+                    icon = Icons.Default.Shield,
+                    label = "שחרור בחירום",
+                    onClick = onEmergencyClick
+                )
+            }
 
-            SettingsButton(
-                icon = Icons.Default.Mail,
-                label = "צור קשר עם המנהל",
-                onClick = { /* TODO */ }
-            )
+            item { Spacer(Modifier.height(28.dp)) }
+            item { SectionTitle("אודות") }
 
-            SettingsButton(
-                icon = Icons.Default.Shield,
-                label = "שחרור בחירום",
-                onClick = onEmergencyClick
-            )
+            item {
+                InfoRow(
+                    icon = Icons.Default.Info,
+                    label = "גרסה",
+                    value = BuildConfig.VERSION_NAME
+                )
+            }
 
-            Spacer(Modifier.height(32.dp))
+            item { Spacer(Modifier.height(40.dp)) }
 
-            if (isUninstallWindowOpen) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "המנהל אישר הסרת האפליקציה",
-                                fontFamily = HebrewFont,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        Button(
-                            onClick = {
-                                context.startActivity(
-                                    Intent(Intent.ACTION_DELETE).apply {
-                                        data = Uri.parse("package:${context.packageName}")
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
+            item {
+                if (isUninstallWindowOpen) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
                                 )
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.Warning, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("הסר עכשיו", fontFamily = HebrewFont)
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    "המנהל אישר הסרת האפליקציה",
+                                    fontFamily = SblHebrew,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontSize = 16.sp
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_DELETE).apply {
+                                            data = Uri.parse("package:${context.packageName}")
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                    )
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Warning, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("הסר עכשיו", fontFamily = SblHebrew, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
-                }
-            } else {
-                Button(
-                    onClick = { showUninstallDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Warning, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("פתיחת חלון הסרה", fontFamily = HebrewFont)
+                } else {
+                    Button(
+                        onClick = { showUninstallDialog = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.08f),
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = null,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("פתיחת חלון הסרה", fontFamily = SblHebrew, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -283,11 +320,11 @@ fun SettingsScreen(
 private fun SectionTitle(text: String) {
     Text(
         text = text,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
-        fontFamily = HebrewFont,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(vertical = 8.dp)
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Bold,
+        fontFamily = BaHaYetzira,
+        color = Primary,
+        modifier = Modifier.padding(vertical = 12.dp)
     )
 }
 
@@ -300,15 +337,15 @@ private fun InfoRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = Muted, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(16.dp))
-        Text(label, fontSize = 15.sp, fontFamily = HebrewFont, modifier = Modifier.weight(1f))
-        Text(value, fontSize = 14.sp, fontFamily = HebrewFont, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, fontSize = 16.sp, fontFamily = SblHebrew, modifier = Modifier.weight(1f), color = Ink)
+        Text(value, fontSize = 14.sp, fontFamily = SblHebrew, color = Muted)
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+    HorizontalDivider(color = LineColor.copy(alpha = 0.6f), thickness = 0.5.dp)
 }
 
 @Composable
@@ -322,24 +359,33 @@ private fun ToggleRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = Muted, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, fontSize = 15.sp, fontFamily = HebrewFont)
+            Text(label, fontSize = 16.sp, fontFamily = SblHebrew, color = Ink)
             Text(
                 description,
                 fontSize = 12.sp,
-                fontFamily = HebrewFont,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                fontFamily = SblHebrew,
+                color = Muted
             )
         }
         Spacer(Modifier.width(8.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Primary,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = LineColor
+            )
+        )
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+    HorizontalDivider(color = LineColor.copy(alpha = 0.6f), thickness = 0.5.dp)
 }
 
 @Composable
@@ -354,14 +400,15 @@ private fun SettingsButton(
         contentPadding = PaddingValues(0.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            Icon(icon, null, tint = Muted, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(16.dp))
-            Text(label, fontSize = 15.sp, fontFamily = HebrewFont, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onBackground)
+            Text(label, fontSize = 16.sp, fontFamily = SblHebrew, modifier = Modifier.weight(1f), color = Ink)
+            Icon(Icons.Default.ChevronLeft, null, tint = LineColor, modifier = Modifier.size(16.dp))
         }
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+    HorizontalDivider(color = LineColor.copy(alpha = 0.6f), thickness = 0.5.dp)
 }
 

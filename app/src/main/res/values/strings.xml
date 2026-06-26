@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">Tether</string>
     <string name="accessibility_service_description">Tether משתמשת בהרשאת נגישות כדי למנוע הסרת התקנה לא מורשית של האפליקציה.</string>
+    <string name="app_blocker_service_description">שירות נגישות לחסימת אפליקציות בשעות שהוגדרו.</string>
 </resources>

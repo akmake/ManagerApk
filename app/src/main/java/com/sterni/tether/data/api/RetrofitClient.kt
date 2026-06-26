@@ -45,6 +45,9 @@ object RetrofitClient {
     val tetherApi: TetherApiService by lazy { retrofit.create(TetherApiService::class.java) }
     val authApi: AuthApiService by lazy { retrofit.create(AuthApiService::class.java) }
     val adminApi: AdminApiService by lazy { retrofit.create(AdminApiService::class.java) }
+    val apiService: ApiService by lazy { retrofit.create(ApiService::class.java) }
+    val articleService: ArticleService by lazy { retrofit.create(ArticleService::class.java) }
+    val zmanimService: ZmanimService by lazy { retrofit.create(ZmanimService::class.java) }
 
     fun <T> create(service: Class<T>): T = retrofit.create(service)
 }

@@ -61,4 +61,15 @@ object NetworkModule {
     @Singleton
     fun provideTetherApiService(retrofit: Retrofit): TetherApiService =
         retrofit.create(TetherApiService::class.java)
+
+    // Daily-study endpoints (study/day, tehillim-chapters, zmanim)
+    @Provides
+    @Singleton
+    fun provideApiService(retrofit: Retrofit): ApiService =
+        retrofit.create(ApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideArticleService(retrofit: Retrofit): ArticleService =
+        retrofit.create(ArticleService::class.java)
 }

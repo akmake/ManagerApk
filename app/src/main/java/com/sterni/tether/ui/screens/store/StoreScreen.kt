@@ -6,13 +6,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -21,8 +22,10 @@ import com.sterni.tether.admin.TetherUpdater
 import com.sterni.tether.data.api.RetrofitClient
 import com.sterni.tether.data.api.TetherApiService
 import com.sterni.tether.data.model.ApprovedApp
-import com.sterni.tether.ui.theme.HebrewFont
+import com.sterni.tether.ui.theme.*
 import kotlinx.coroutines.launch
+
+private val BgOffWhite = Color(0xFFF8F6F2)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +39,7 @@ fun StoreScreen(onBack: () -> Unit) {
         scope.launch {
             isLoading = true
             try {
-                val api = RetrofitClient.create(TetherApiService::class.java)
+                val api = RetrofitClient.tetherApi
                 val response = api.getApprovedApps()
                 if (response.isSuccessful) {
                     approvedApps = response.body() ?: emptyList()
@@ -54,25 +57,27 @@ fun StoreScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
+        containerColor = BgOffWhite,
         topBar = {
             TopAppBar(
-                title = { Text("האפליקציות שלי", fontFamily = HebrewFont) },
+                title = { Text("כלים", fontFamily = BaHaYetzira, fontSize = 22.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowForward, "חזרה")
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, "חזרה")
                     }
                 },
                 actions = {
                     IconButton(onClick = { loadApps() }) {
-                        Icon(Icons.Default.Refresh, "רענן")
+                        Icon(Icons.Default.Refresh, "רענן", tint = Primary)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgOffWhite)
             )
         }
     ) { padding ->
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = Primary)
             }
         } else {
             LazyColumn(
@@ -111,52 +116,54 @@ fun AppStoreItem(app: ApprovedApp) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // App Icon Placeholder (could use Coil for real icons)
             Surface(
                 modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer
+                shape = RoundedCornerShape(10.dp),
+                color = BgOffWhite
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(app.appName.take(1), fontWeight = FontWeight.Bold)
+                    Text(app.appName.take(1), fontWeight = FontWeight.Bold, color = Primary, fontFamily = BaHaYetzira)
                 }
             }
 
             Spacer(Modifier.width(16.dp))
 
             Column(Modifier.weight(1f)) {
-                Text(app.appName, fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = HebrewFont)
+                Text(app.appName, fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = SblHebrew, color = Ink)
                 Text(
                     if (isInstalled) {
-                        if (needsUpdate) "עדכון זמין (v${app.versionCode})" else "מותקן"
-                    } else "לא מותקן",
+                        if (needsUpdate) "עדכון זמין" else "מותקן"
+                    } else "ניתן להתקנה",
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontFamily = SblHebrew,
+                    color = Muted
                 )
             }
 
             if (isInstalling) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = Primary)
             } else if (!isInstalled || needsUpdate) {
                 Button(
                     onClick = {
                         scope.launch {
                             isInstalling = true
-                            TetherUpdater.checkAndUpdateAll(context) // For now, triggers all updates
+                            TetherUpdater.checkAndUpdateAll(context)
                             isInstalling = false
                         }
                     },
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
                 ) {
-                    Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (needsUpdate) "עדכן" else "התקן", fontSize = 14.sp, fontFamily = HebrewFont)
+                    Text(if (needsUpdate) "עדכן" else "התקן", fontSize = 13.sp, fontFamily = SblHebrew)
                 }
             }
         }

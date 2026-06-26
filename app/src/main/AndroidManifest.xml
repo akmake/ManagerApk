@@ -1,10 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
@@ -25,6 +37,11 @@
         android:enableOnBackInvokedCallback="true"
         android:theme="@style/Theme.Tether"
         android:usesCleartextTraffic="false">
+
+        <!-- Google Maps API key (silent-zones map) -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBnicS2liphCxl4aeAzRgMeX-cQTkd8d5E" />
 
         <activity
             android:name=".MainActivity"
@@ -116,6 +133,50 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/tether_accessibility_service" />
+        </service>
+
+        <!-- ===== Daily-study study-area subsystems ===== -->
+
+        <!-- Zmanim alarm receiver + ringtone foreground service -->
+        <receiver
+            android:name=".alarm.ZmanimAlarmReceiver"
+            android:exported="false" />
+        <service
+            android:name=".alarm.ZmanimAlarmService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Reschedules zmanim alarms after reboot -->
+        <receiver
+            android:name=".alarm.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Silent-zone geofence receiver -->
+        <receiver
+            android:name=".geofence.GeofenceReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.sterni.tether.ACTION_GEOFENCE_EVENT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- App blocker (scheduled, by hours) accessibility service -->
+        <service
+            android:name=".service.AppBlockerAccessibilityService"
+            android:exported="true"
+            android:label="חוסם אפליקציות"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/app_blocker_accessibility_service" />
         </service>
 
     </application>
