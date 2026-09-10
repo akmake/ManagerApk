@@ -601,6 +601,23 @@ private fun DevicePolicyTab(
                         }
                         HorizontalDivider(Modifier.padding(bottom = 12.dp))
 
+                        NullablePolicyRow("🛡 חבילת חסימה (הכל יחד)", edited.blockPack) {
+                            edited = edited.copy(blockPack = it)
+                        }
+                        Text(
+                            "דפדפנים + יוטיוב + התקנות חיצוניות + כל החנויות",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+                        HorizontalDivider(Modifier.padding(bottom = 6.dp))
+
+                        NullablePolicyRow("חסום את כל הדפדפנים", edited.blockAllBrowsers) {
+                            edited = edited.copy(blockAllBrowsers = it)
+                        }
+                        NullablePolicyRow("חסום יוטיוב (כל הצורות)", edited.blockYoutube) {
+                            edited = edited.copy(blockYoutube = it)
+                        }
                         NullablePolicyRow("חסום התקנת אפליקציות", edited.blockInstallApps) {
                             edited = edited.copy(blockInstallApps = it)
                         }

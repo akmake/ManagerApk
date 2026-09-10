@@ -18,6 +18,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.sterni.tether.admin.AdminSession
 import com.sterni.tether.ui.screens.admin.*
+import com.sterni.tether.ui.screens.diagnostics.DiagnosticsScreen
+import com.sterni.tether.ui.screens.permissions.PermissionsCenterScreen
+import com.sterni.tether.ui.screens.selftools.SelfToolsScreen
 
 sealed class AdminScreen(val route: String) {
     object Login       : AdminScreen("admin_login")
@@ -42,6 +45,9 @@ sealed class AdminScreen(val route: String) {
     object DeviceDetail  : AdminScreen("admin_device/{deviceId}") {
         fun route(deviceId: String) = "admin_device/${encode(deviceId)}"
     }
+    object SelfTools     : AdminScreen("admin_self_tools")
+    object Diagnostics   : AdminScreen("admin_diagnostics")
+    object Permissions   : AdminScreen("admin_permissions")
 }
 
 private fun encode(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
@@ -143,8 +149,29 @@ fun AdminNavGraph(
                     onApprovedAppsClick = {
                         navController.navigate(AdminScreen.ApprovedAppsCatalog.route)
                     },
+                    onSelfToolsClick = {
+                        navController.navigate(AdminScreen.SelfTools.route)
+                    },
+                    onDiagnosticsClick = {
+                        navController.navigate(AdminScreen.Diagnostics.route)
+                    },
+                    onPermissionsClick = {
+                        navController.navigate(AdminScreen.Permissions.route)
+                    },
                     onLogout = onExit
                 )
+            }
+
+            composable(AdminScreen.SelfTools.route) {
+                SelfToolsScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(AdminScreen.Diagnostics.route) {
+                DiagnosticsScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(AdminScreen.Permissions.route) {
+                PermissionsCenterScreen(onBack = { navController.popBackStack() })
             }
 
             composable(AdminScreen.Provisioning.route) {

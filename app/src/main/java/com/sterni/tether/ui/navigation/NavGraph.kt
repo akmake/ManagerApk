@@ -20,6 +20,8 @@ import com.sterni.tether.ui.screens.join.QrScannerScreen
 import com.sterni.tether.ui.screens.join.isAccessibilityEnabled
 import com.sterni.tether.ui.screens.news.NewsScreen
 import com.sterni.tether.ui.screens.onboarding.OnboardingScreen
+import com.sterni.tether.ui.screens.diagnostics.DiagnosticsScreen
+import com.sterni.tether.ui.screens.selftools.SelfToolsScreen
 import com.sterni.tether.ui.screens.settings.SettingsScreen
 import com.sterni.tether.ui.screens.store.StoreScreen
 import com.sterni.tether.ui.screens.study.StudyDetailScreen
@@ -60,6 +62,8 @@ sealed class Screen(val route: String) {
     object Calendar : Screen("calendar")
     object News     : Screen("news")
     object Settings : Screen("settings")
+    object SelfTools : Screen("self_tools")
+    object Diagnostics : Screen("diagnostics")
     object Zmanim   : Screen("zmanim")
     object Tools    : Screen("tools")
     object JerusalemDir : Screen("jerusalemDirection")
@@ -240,8 +244,18 @@ fun NavGraph(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
-                onEmergencyClick = { navController.navigate(Screen.Emergency.route) }
+                onEmergencyClick = { navController.navigate(Screen.Emergency.route) },
+                onSelfToolsClick = { navController.navigate(Screen.SelfTools.route) },
+                onDiagnosticsClick = { navController.navigate(Screen.Diagnostics.route) }
             )
+        }
+
+        composable(Screen.SelfTools.route) {
+            SelfToolsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Diagnostics.route) {
+            DiagnosticsScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.Emergency.route) {

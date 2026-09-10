@@ -7,6 +7,11 @@ import retrofit2.http.*
 interface AuthApiService {
     @POST("tether/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+
+    // Active logout — revokes this admin's tokens server-side. Admin tokens never expire on their
+    // own, so without this call a "logged out" token would stay valid forever.
+    @POST("tether/auth/logout")
+    suspend fun logout(@Header("Authorization") token: String): Response<Unit>
 }
 
 interface AdminApiService {

@@ -26,6 +26,13 @@ data class CommunityPolicy(
     val hideGooglePlay: Boolean = true,
     val blockAllStores: Boolean = false,   // per-device: block all store UIs
     val blockApkInstall: Boolean = true,   // per-device: block APK sideloading
+    // ── חבילת חסימה (block bundle) ──
+    // Master switch. When true it forces browsers + YouTube + external installs + every store to
+    // be blocked at once, whatever the individual flags below say. Turning it off restores each
+    // individual flag rather than unblocking everything — see the `blocked*` helpers below.
+    val blockPack: Boolean = false,
+    val blockAllBrowsers: Boolean = false, // every browser on the device, resolved dynamically
+    val blockYoutube: Boolean = false,     // all YouTube apps + youtube.com inside a browser
     val blockSafeBoot: Boolean = true,
     val blockFactoryReset: Boolean = true,
     val blockUsbTransfer: Boolean = false,
@@ -47,6 +54,34 @@ data class CommunityPolicy(
     val lockedUntilTs: Long? = null,
     val adminEmergencyCode: String? = null
 )
+
+// ─────────────────────────────────────────────────────────────────────────────
+// חבילת חסימה — effective values
+//
+// Always read the bundle through these instead of the raw fields, so the master switch can never
+// be honoured in one enforcement path and missed in another. Each is `blockPack || <own flag>`:
+// the bundle adds blocks, it never removes one the admin set individually.
+//
+// These fields are JVM primitives, so a policy whose JSON omits them deserialises to false rather
+// than to the Kotlin default — the bundle stays off until it is explicitly turned on, which is the
+// safe direction for a new field rolling out ahead of the server.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Every browser on the device is blocked. */
+val CommunityPolicy.blockedBrowsers: Boolean
+    get() = blockPack || blockAllBrowsers
+
+/** YouTube is blocked in every form — all app variants, and youtube.com inside a browser. */
+val CommunityPolicy.blockedYoutube: Boolean
+    get() = blockPack || blockYoutube
+
+/** Sideloading / external APK installs are blocked. */
+val CommunityPolicy.blockedExternalInstalls: Boolean
+    get() = blockPack || blockApkInstall || blockInstallApps
+
+/** Every app store is blocked — OEM stores and third-party store APKs alike. */
+val CommunityPolicy.blockedStores: Boolean
+    get() = blockPack || blockAllStores || blockInstallApps
 
 data class InstalledAppInfo(
     val packageName: String,

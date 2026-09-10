@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
-    kotlin("kapt")
+    alias(libs.plugins.ksp)
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -21,12 +21,12 @@ val debugBaseUrl = providers.gradleProperty("DEBUG_BASE_URL")
 
 android {
     namespace = "com.sterni.tether"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.sterni.tether"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -37,18 +37,22 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
+        // Only wire up release signing when keystore.properties is present (it is gitignored).
+        // Without this guard, configuration would crash on a fresh clone / CI / debug-only build.
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -97,7 +101,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.hilt.android)
-    kapt(libs.hilt.android.compiler)
+    ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
 
     // WorkManager
@@ -136,8 +140,4 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     debugImplementation(libs.androidx.ui.tooling)
-}
-
-kapt {
-    correctErrorTypes = true
 }

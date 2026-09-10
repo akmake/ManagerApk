@@ -17,6 +17,8 @@ import com.sterni.tether.data.model.AppPolicyMode
 import com.sterni.tether.data.model.AppTimeLock
 import com.sterni.tether.data.model.BlockedActionBehavior
 import com.sterni.tether.data.model.CommunityPolicy
+import com.sterni.tether.data.model.blockedExternalInstalls
+import com.sterni.tether.data.model.blockedStores
 
 import android.content.Intent
 import com.sterni.tether.data.model.WebFilterMode
@@ -128,11 +130,18 @@ object TetherPolicyManager {
                 dpm.setApplicationHidden(admin, context.packageName, false)
             }
 
+            // חבילת חסימה: the exact set of packages the bundle blocks on THIS device (browsers are
+            // resolved live, so it differs per device). Computed once and threaded through every
+            // pass below — a package missing from one of them is a package that gets un-suspended
+            // again on the next sync.
+            val packBlocked = BlockPack.blockedPackages(context, policy)
+
             applyInstallRestriction(dpm, context, policy.blockInstallApps, allowUninstall)
+            applyExternalInstallRestriction(dpm, context, policy.blockedExternalInstalls)
             applySafeBootRestriction(dpm, context, policy.blockSafeBoot)
             applyFactoryResetRestriction(dpm, context, policy.blockFactoryReset)
             applyUsbRestriction(dpm, context, policy.blockUsbTransfer)
-            applyTimeLock(dpm, context, policy.lockedUntilTs, policy.blockedApps)
+            applyTimeLock(dpm, context, policy.lockedUntilTs, policy.blockedApps + packBlocked)
             applyAppTimeLocks(dpm, context, policy.appTimeLocks)
 
             val now = System.currentTimeMillis()
@@ -146,9 +155,14 @@ object TetherPolicyManager {
             // bypasses Kotlin defaults → null), which would otherwise crash the when() below.
             val effectiveMode = if (timeLockActive) AppPolicyMode.WHITELIST
                                 else (policy.appPolicyMode ?: AppPolicyMode.BLACKLIST)
-            applyAppSuspension(dpm, context, if (timeLockActive) emptyList() else effectiveAllowed, policy.blockedApps, policy.maxInstalledApps, effectiveMode)
+            applyAppSuspension(
+                dpm, context,
+                if (timeLockActive) emptyList() else effectiveAllowed,
+                policy.blockedApps, policy.maxInstalledApps, effectiveMode,
+                forceBlocked = packBlocked
+            )
 
-            applyHiddenApps(dpm, context, policy.hideGooglePlay, policy.blockAllStores, policy.blockedApps)
+            applyHiddenApps(dpm, context, policy.hideGooglePlay, policy.blockedStores, policy.blockedApps + packBlocked)
             applyAntiBypassRestrictions(dpm, context, true)
 
             Log.i(TAG, "Policy applied successfully")
@@ -212,6 +226,38 @@ object TetherPolicyManager {
         }
     }
 
+    /**
+     * External / sideloaded installs — the "חסימת התקנות חיצוניות" half of the bundle.
+     *
+     * Distinct from [applyInstallRestriction]: that one is the blunt DISALLOW_INSTALL_APPS lockdown
+     * which also freezes accounts and uninstalls. This one targets sideloading specifically —
+     * unknown sources off, and every package-installer UI hidden and suspended so a downloaded APK
+     * has nothing to open it with. Until now `blockApkInstall` was carried through the policy and
+     * the admin UI but never actually enforced anywhere; this is where it lands.
+     */
+    private fun applyExternalInstallRestriction(
+        dpm: DevicePolicyManager,
+        context: Context,
+        block: Boolean
+    ) {
+        val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
+        // An active uninstall window must be able to run the installer to remove us.
+        if (block && isUninstallWindowActive(context)) return
+
+        runCatching {
+            if (block) dpm.addUserRestriction(admin, UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
+            else dpm.clearUserRestriction(admin, UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
+        }.onFailure { Log.w(TAG, "Unknown-sources restriction failed: ${it.message}") }
+
+        BlockPack.INSTALLER_PACKAGES.forEach { pkg ->
+            runCatching {
+                dpm.setApplicationHidden(admin, pkg, block)
+                dpm.setPackagesSuspended(admin, arrayOf(pkg), block)
+            }.onFailure { Log.w(TAG, "Could not restrict installer $pkg: ${it.message}") }
+        }
+        Log.i(TAG, "External installs blocked=$block")
+    }
+
     private fun applySafeBootRestriction(dpm: DevicePolicyManager, context: Context, block: Boolean) {
         val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
         if (block) dpm.addUserRestriction(admin, UserManager.DISALLOW_SAFE_BOOT)
@@ -247,19 +293,10 @@ object TetherPolicyManager {
             "com.google.android.packageinstaller"
         )
 
-        // Third-party stores — blocked only when blockAllStores
-        val otherStorePackages = listOf(
-            "com.sec.android.app.samsungapps",
-            "com.samsung.android.app.installserv",
-            "com.sec.android.app.installserv",
-            "com.miui.packageinstaller",
-            "com.coloros.packageinstaller",
-            "com.huawei.appmarket",
-            "com.amazon.venezia",
-            "com.xiaomi.market",
-            "com.oppo.market",
-            "com.vivo.appstore"
-        )
+        // Every other store — OEM stores AND the third-party store APKs users install to sideload
+        // (Aptoide / APKPure / F-Droid / …), which are the actual bypass route. Blocked when
+        // blockAllStores is on, which the חבילת חסימה master switch forces.
+        val otherStorePackages = (BlockPack.ALL_STORE_PACKAGES - playPackages.toSet()).toList()
 
         val blockPlay = hideGooglePlay || blockAllStores
 
@@ -311,27 +348,10 @@ object TetherPolicyManager {
             .apply()
     }
 
-    fun setAdminAuthenticated(context: Context, authenticated: Boolean) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean("admin_auth", authenticated)
-            .putLong("admin_auth_time", if (authenticated) System.currentTimeMillis() else 0L)
-            .apply()
-    }
-
-    fun isAdminAuthenticated(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val authenticated = prefs.getBoolean("admin_auth", false)
-        val authTime = prefs.getLong("admin_auth_time", 0L)
-        
-        // Session valid for 24 hours of inactivity for better UX since it's a management app
-        val isValid = (System.currentTimeMillis() - authTime) < (24 * 60 * 60 * 1000)
-        if (authenticated && !isValid) {
-            setAdminAuthenticated(context, false)
-            return false
-        }
-        return authenticated
-    }
+    // A second, 24-hour-expiring admin flag used to live here (setAdminAuthenticated /
+    // isAdminAuthenticated). Nothing ever called it, and it contradicted the real rule — an admin
+    // session ends on an explicit logout, never on a timer. AdminSession is the single source of
+    // truth for who is signed in.
 
     fun getDeviceId(context: Context): String? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_DEVICE_ID, null)
@@ -727,14 +747,18 @@ object TetherPolicyManager {
         allowedApps: List<String>,
         blockedApps: List<String>,
         maxInstalledApps: Int?,
-        mode: AppPolicyMode
+        mode: AppPolicyMode,
+        forceBlocked: Set<String> = emptySet()
     ) {
         val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
         try {
             val pm = context.packageManager
             val allApps = pm.getInstalledApplications(0)
-            
-            // אפליקציות מערכת קריטיות
+
+            // אפליקציות מערכת קריטיות — לעולם לא מושהות, אחרת המכשיר מתקלקל.
+            // Chrome used to sit in this set, which silently defeated any attempt to block it:
+            // it was released on every sync. It is a browser, not a critical system app, so it is
+            // no longer exempt — the חבילת חסימה set decides its fate like any other package.
             val criticalSystemApps = setOf(
                 context.packageName,
                 "com.android.settings",
@@ -744,9 +768,8 @@ object TetherPolicyManager {
                 "com.android.dialer",
                 "com.google.android.inputmethod.latin",
                 "com.samsung.android.honeyboard",
-                "com.android.chrome",
                 "com.sec.android.app.launcher"
-            )
+            ) - forceBlocked
 
             // רשימת חנויות ומתקינים שחייבים להיעלם לחלוטין (Hidden)
             val storesToHide = setOf(
@@ -778,10 +801,12 @@ object TetherPolicyManager {
                 
                 // 2. לוגיקת אכיפה לפי מצב:
                 //    WHITELIST = רק allowedApps מותרות; BLACKLIST = הכל מותר חוץ מ-blockedApps.
+                //    forceBlocked (חבילת חסימה) גובר על שניהם — גם על allowedApps — אחרת דפדפן
+                //    שנמצא ברשימת המותרות היה משתחרר כאן בכל סנכרון.
                 val allow = when (mode) {
                     AppPolicyMode.WHITELIST -> allowedApps.contains(pkg) && !blockedApps.contains(pkg)
                     AppPolicyMode.BLACKLIST -> !blockedApps.contains(pkg)
-                }
+                } && !forceBlocked.contains(pkg)
                 if (allow) {
                     toRelease.add(pkg)
                     allowedCandidates.add(pkg)

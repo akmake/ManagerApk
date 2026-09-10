@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
 import com.sterni.tether.notification.CalendarReminderWorker
@@ -53,25 +54,26 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             TetherTheme {
-                var adminMode by remember { mutableStateOf(false) }
-                var isAuthenticated by remember { mutableStateOf(false) }
+                // rememberSaveable, NOT remember: this activity has no android:configChanges, so the
+                // system recreates it on every configuration change — rotation, dark/light switch,
+                // font-size change, split screen — and on process death. With plain `remember` the
+                // flag reset to false each time and the manager was dumped back to the app's start
+                // screen mid-task, over and over.
+                var adminMode by rememberSaveable { mutableStateOf(false) }
 
                 if (adminMode) {
                     val adminNavController = rememberNavController()
-                    if (!isAuthenticated) {
-                        com.sterni.tether.ui.screens.admin.AdminLoginScreen(
-                            onLoggedIn = { isAuthenticated = true },
-                            onBack = { adminMode = false }
-                        )
-                    } else {
-                        AdminNavGraph(
-                            navController = adminNavController,
-                            onExit = { 
-                                adminMode = false 
-                                isAuthenticated = false
-                            }
-                        )
-                    }
+                    // No login gate here. There used to be a second AdminLoginScreen at this level
+                    // guarded by a transient `isAuthenticated` boolean, which ignored the stored
+                    // session entirely — so every recreation demanded the password again even
+                    // though a valid token was sitting in AdminSession. AdminNavGraph owns login
+                    // now, and it picks its start destination from that stored session, so a
+                    // signed-in manager goes straight in. rememberNavController restores the back
+                    // stack too, which puts them back on the screen they were actually using.
+                    AdminNavGraph(
+                        navController = adminNavController,
+                        onExit = { adminMode = false }
+                    )
                 } else {
                     val navController = rememberNavController()
                     NavGraph(

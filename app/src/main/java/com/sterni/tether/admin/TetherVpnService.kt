@@ -196,6 +196,9 @@ class TetherVpnService : VpnService() {
 
         if (blocked) {
             Log.i(TAG, "Blocked domain: $domain")
+            // Report to the admin activity log. Throttled per-domain (5 min) because the same
+            // domain is queried repeatedly and would otherwise flood the log.
+            SecurityLogger.log(this, "DOMAIN_BLOCKED", domain, throttleMs = 300_000L)
             broadcastBlocked(domain)
             val nxdomain = buildNxDomainResponse(dnsData)
             val response = buildIpUdpResponse(packetData, ipHeaderLen, nxdomain)

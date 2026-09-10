@@ -6,12 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.app.admin.DevicePolicyManager
 import android.util.Log
-import com.sterni.tether.data.api.RetrofitClient
-import com.sterni.tether.data.api.SecurityEventRequest
-import com.sterni.tether.data.api.TetherApiService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class TetherDeviceAdminReceiver : DeviceAdminReceiver() {
 
@@ -34,6 +28,7 @@ class TetherDeviceAdminReceiver : DeviceAdminReceiver() {
                         dpm.setPackagesSuspended(admin, arrayOf(packageName), true)
                         dpm.setApplicationHidden(admin, packageName, true)
                         Log.w(TAG, "Blocked new installation immediately: $packageName")
+                        SecurityLogger.log(context, "NEW_APP_BLOCKED", packageName, throttleMs = 0L)
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to block new app: $packageName", e)
                     }
@@ -44,15 +39,7 @@ class TetherDeviceAdminReceiver : DeviceAdminReceiver() {
 
     override fun onDisabled(context: Context, intent: Intent) {
         Log.w(TAG, "Device admin disabled")
-        val deviceId = TetherPolicyManager.getDeviceId(context) ?: return
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                RetrofitClient.create(TetherApiService::class.java)
-                    .logSecurityEvent(deviceId, SecurityEventRequest("ADMIN_DEACTIVATE_ATTEMPT", null))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to report admin deactivation: ${e.message}")
-            }
-        }
+        SecurityLogger.log(context, "ADMIN_DEACTIVATE_ATTEMPT", throttleMs = 0L)
     }
 
     override fun onProfileProvisioningComplete(context: Context, intent: Intent) {

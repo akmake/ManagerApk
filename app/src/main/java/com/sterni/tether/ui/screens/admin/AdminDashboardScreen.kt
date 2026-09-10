@@ -66,6 +66,9 @@ fun AdminDashboardScreen(
     onProvisioningClick: () -> Unit,
     onGlobalOverviewClick: () -> Unit = {},
     onApprovedAppsClick: () -> Unit = {},
+    onSelfToolsClick: () -> Unit = {},
+    onDiagnosticsClick: () -> Unit = {},
+    onPermissionsClick: () -> Unit = {},
     onLogout: () -> Unit,
     vm: AdminDashboardViewModel = viewModel()
 ) {
@@ -227,7 +230,35 @@ fun AdminDashboardScreen(
                         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
                         onClick = onApprovedAppsClick
                     )
-                    Spacer(modifier = Modifier.weight(1f))
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Timer,
+                        label = "כלים עצמיים",
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                        onClick = onSelfToolsClick
+                    )
+                }
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.BugReport,
+                        label = "יומן אבחון",
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        onClick = onDiagnosticsClick
+                    )
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Security,
+                        label = "הרשאות הגנה",
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                        onClick = onPermissionsClick
+                    )
                 }
             }
 

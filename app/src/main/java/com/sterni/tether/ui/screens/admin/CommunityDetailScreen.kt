@@ -700,6 +700,21 @@ private fun PolicyTab(
             item {
                 PolicySectionCard(title = "חסימות", icon = Icons.Default.Block) {
                     PolicyRow(
+                        label = "🛡 חבילת חסימה",
+                        desc = "כפתור אחד: כל הדפדפנים + יוטיוב בכל צורה + התקנות חיצוניות + כל החנויות",
+                        value = edited.blockPack
+                    ) { edited = edited.copy(blockPack = it) }
+                    PolicyRow(
+                        label = "חסום את כל הדפדפנים",
+                        desc = "מזוהים אוטומטית — כולל דפדפן שיותקן בעתיד",
+                        value = edited.blockAllBrowsers
+                    ) { edited = edited.copy(blockAllBrowsers = it) }
+                    PolicyRow(
+                        label = "חסום יוטיוב בכל צורה",
+                        desc = "כל גרסאות האפליקציה (Kids/Music/ReVanced) + youtube.com בדפדפן",
+                        value = edited.blockYoutube
+                    ) { edited = edited.copy(blockYoutube = it) }
+                    PolicyRow(
                         label = "חסום התקנת אפליקציות",
                         desc = "מונע התקנה מ-Play Store ומהרשת",
                         value = edited.blockInstallApps

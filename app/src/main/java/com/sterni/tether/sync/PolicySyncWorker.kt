@@ -41,15 +41,23 @@ class PolicySyncWorker(
                 val currentPkgs = installed.map { it.packageName }.toSet()
                 
                 val newApps = installed.filter { it.packageName !in lastReportedPkgs }
+                if (currentPkgs != lastReportedPkgs && lastReportedPkgs.isNotEmpty()) {
+                    // The app list moved — a newly installed browser must be caught on THIS sync,
+                    // not whenever the resolver cache happens to expire. Re-applying the stored
+                    // policy afterwards is what actually suspends it: the apply below only runs
+                    // when the *policy* changed, and installing a browser doesn't change the policy.
+                    com.sterni.tether.admin.BlockPack.invalidateBrowserCache()
+                    TetherPolicyManager.applyStoredPolicy(context)
+                }
                 if (newApps.isNotEmpty() && lastReportedPkgs.isNotEmpty()) {
                     // המשתמש התקין אפליקציות חדשות! נדווח למנהל כאירוע אבטחה
                     newApps.forEach { app ->
-                        try {
-                            api.logSecurityEvent(deviceId, com.sterni.tether.data.api.SecurityEventRequest(
-                                type = "NEW_APP_INSTALLED", // נצטרך להוסיף את זה ל-Enum בשרת
-                                packageName = "${app.appName} (${app.packageName})"
-                            ))
-                        } catch (_: Exception) {}
+                        com.sterni.tether.admin.SecurityLogger.log(
+                            context,
+                            type = "NEW_APP_INSTALLED",
+                            target = "${app.appName} (${app.packageName})",
+                            throttleMs = 0L
+                        )
                     }
                 }
                 

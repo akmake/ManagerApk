@@ -6,15 +6,20 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
+import com.sterni.tether.BuildConfig
 import com.sterni.tether.data.api.RetrofitClient
-import com.sterni.tether.data.api.SecurityEventRequest
-import com.sterni.tether.data.api.TetherApiService
+import com.sterni.tether.data.local.AppBlockerPrefs
+import com.sterni.tether.data.local.ShortsLimitPrefs
 import com.sterni.tether.data.model.AppPolicyMode
 import com.sterni.tether.data.model.BlockedActionBehavior
+import com.sterni.tether.data.model.blockedBrowsers
+import com.sterni.tether.data.model.blockedStores
+import com.sterni.tether.data.model.blockedYoutube
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 class TetherAccessibilityService : AccessibilityService() {
 
@@ -27,16 +32,23 @@ class TetherAccessibilityService : AccessibilityService() {
     private var lastWhatsAppActionTs = 0L
     private var lastWhatsAppDebugTs = 0L
 
+    // YouTube Shorts daily-limit tracker.
+    // shortsWatchingSince = wall-clock ms when the current Shorts session started (0 = not watching).
+    private var shortsWatchingSince = 0L
+    private var lastShortsScanTs = 0L
+    private var lastShortsActionTs = 0L
+    private var lastShortsLimitLogTs = 0L        // throttles SHORTS_LIMIT_REACHED server events
+    private var shortsDetectedLogDate: String? = null // last day a SHORTS_DETECTED event was sent
+    private var lastShortsDebugTs = 0L           // throttles the debug id-dump aid
+
+    // חבילת חסימה throttles — a blocked browser fires WINDOW_CONTENT_CHANGED continuously while
+    // it is dying, and without these every tick would queue another Home bounce.
+    private var lastPackActionTs = 0L
+    private var lastUrlScanTs = 0L
+
+    // All accessibility blocks funnel through the shared SecurityLogger (device-id + throttle + POST).
     private fun logEvent(type: String, packageName: String? = null) {
-        val deviceId = TetherPolicyManager.getDeviceId(this) ?: return
-        serviceScope.launch {
-            try {
-                RetrofitClient.create(TetherApiService::class.java)
-                    .logSecurityEvent(deviceId, SecurityEventRequest(type, packageName))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to log security event: ${e.message}")
-            }
-        }
+        SecurityLogger.log(this, type, packageName)
     }
 
     companion object {
@@ -44,19 +56,8 @@ class TetherAccessibilityService : AccessibilityService() {
         private const val OUR_PACKAGE = "com.sterni.tether"
         private const val OUR_LABEL = "Tether"
 
-        // All app stores — blocked entirely when blockInstallApps = true
-        private val APP_STORE_PACKAGES = setOf(
-            "com.android.vending",              // Google Play Store
-            "com.sec.android.app.samsungapps",  // Samsung Galaxy Store
-            "com.samsung.android.app.settings.bixby", // Bixby can sometimes bypass
-            "com.amazon.venezia",               // Amazon Appstore
-            "com.huawei.appmarket",             // Huawei AppGallery
-            "com.xiaomi.market",                // Xiaomi GetApps
-            "com.oppo.market",                  // Oppo App Market
-            "com.vivo.appstore",                // Vivo App Store
-            "com.bbk.appstore",                 // BBK App Store
-            "com.meizu.mstore"                  // Meizu App Store
-        )
+        // Store and installer package lists now live in BlockPack — one source of truth shared
+        // with TetherPolicyManager, so the two layers can never drift apart.
 
         // Both WhatsApp variants share the same engine, Status/Channels features and internal
         // resource-ids — only the package name differs. The shield must cover both.
@@ -72,6 +73,41 @@ class TetherAccessibilityService : AccessibilityService() {
         private const val WHATSAPP_SCAN_COOLDOWN_MS = 300L    // max scan rate on noisy content-changes
         private const val WHATSAPP_ACTION_COOLDOWN_MS = 1200L // min gap between two Home bounces
         private const val WHATSAPP_DEBUG_COOLDOWN_MS = 4000L  // id-dump rate (on-device tuning aid)
+
+        // === YouTube Shorts daily-limit shield ===
+        // Only the Shorts player is limited; regular videos are never touched.
+        private val YOUTUBE_PACKAGES = setOf(
+            "com.google.android.youtube",
+            "app.revanced.android.youtube"   // common YouTube mod — same internal "reel" ids
+        )
+
+        // LANGUAGE-INDEPENDENT detection of the Shorts player. YouTube internally calls Shorts
+        // "reel", so we match its resource-ids / class tokens (always English, for every UI
+        // language) rather than localized on-screen text.
+        private val YOUTUBE_SHORTS_TOKENS = listOf(
+            "reel_recycler",              // the vertical Shorts pager
+            "reel_player_page_container",
+            "reel_player_underlay",
+            "reel_watch_player",
+            "reel_watch_fragment",
+            "shorts_"                     // some builds prefix Shorts ids with shorts_
+        )
+
+        private const val SHORTS_SCAN_COOLDOWN_MS = 700L   // max tree-scan rate while in YouTube
+        private const val SHORTS_ACTION_COOLDOWN_MS = 1500L // min gap between two Back bounces
+        private const val SHORTS_MAX_TICK_SEC = 20L        // cap per accrual tick (guards idle gaps)
+        private const val SHORTS_WARNING_SEC = 300L        // warn when this many seconds remain (5 min)
+        private const val SHORTS_LIMIT_LOG_COOLDOWN_MS = 600_000L // 10 min between limit-reached events
+        private const val SHORTS_DEBUG_COOLDOWN_MS = 4000L // id-dump rate (debug tuning aid)
+        private const val SHORTS_LIMIT_MESSAGE = "נגמר הזמן לשורטס להיום. אפשר להוסיף דקות באפליקציה."
+        private const val SHORTS_WARNING_MESSAGE = "נשארו לך 5 דקות שורטס להיום"
+        private const val SHORTS_PSEUDO_PKG = "com.google.android.youtube.shorts"
+
+        // === חבילת חסימה (block bundle) ===
+        private const val PACK_ACTION_COOLDOWN_MS = 1200L  // min gap between two Home bounces
+        private const val PACK_URL_SCAN_COOLDOWN_MS = 400L // max address-bar scan rate
+        private const val BROWSER_BLOCK_MESSAGE = "הגלישה באינטרנט חסומה במכשיר הזה"
+        private const val YOUTUBE_BLOCK_MESSAGE = "יוטיוב חסום במכשיר הזה"
 
         // LANGUAGE-INDEPENDENT detection of WhatsApp's Status & Channels screens.
         // We match WhatsApp's internal resource-id / class tokens (always English, for every
@@ -108,20 +144,6 @@ class TetherAccessibilityService : AccessibilityService() {
             "com.sec.android.app.launcher",
             "com.google.android.apps.nexuslauncher",
             "com.android.launcher3"
-        )
-
-        // APK installer packages — ALWAYS blocked regardless of policy
-        private val PACKAGE_INSTALLER_PACKAGES = setOf(
-            "com.android.packageinstaller",
-            "com.google.android.packageinstaller",
-            "com.miui.packageinstaller",
-            "com.samsung.android.packageinstaller",
-            "com.samsung.android.app.installserv", // Samsung background installer
-            "com.sec.android.app.installserv",     // Older Samsung installer
-            "com.huawei.android.packageinstaller",
-            "com.oppo.packageinstaller",
-            "com.coloros.packageinstaller",
-            "com.vivo.packageinstaller"
         )
 
         // Settings screens that allow bypassing protection
@@ -177,8 +199,15 @@ class TetherAccessibilityService : AccessibilityService() {
         val blockedBehavior = policy?.blockedActionBehavior ?: BlockedActionBehavior.SILENT
         val hasTempApproval = TetherPolicyManager.isAppTemporarilyAllowed(this, pkg)
 
+        // MANAGER DEVICE: while an admin is logged in on this device, none of the community
+        // protections (installer/app/store/settings blocking) apply — a manager isn't locked down.
+        // Only the SELF-imposed tools below (Shorts limit, local WhatsApp shield, schedules), which
+        // the manager turned on themselves, keep working. Admin login requires server auth, so a
+        // managed user can't reach this state.
+        val managerExempt = AdminSession.isLoggedIn(this)
+
         // === Layer 1: APK installers — ALWAYS blocked, independent of app mode ===
-        if (pkg in PACKAGE_INSTALLER_PACKAGES && !hasTempApproval) {
+        if (BlockPack.isInstaller(pkg) && !hasTempApproval && !managerExempt) {
             Log.w(TAG, "Blocking APK installer: $pkg")
             logEvent("BLOCKED_APP_OPENED", pkg)
             maybeRequestApproval(pkg, blockedBehavior)
@@ -191,7 +220,7 @@ class TetherAccessibilityService : AccessibilityService() {
         // WHITELIST (kiosk):   only allowedApps (and critical system apps) run; the rest are bounced.
         // Critical system apps (keyboard/dialer/launcher/settings/us) are never bounced, so the
         // device stays usable. With no policy yet we behave as BLACKLIST (don't brick the device).
-        if (pkg !in CRITICAL_SYSTEM_PACKAGES && !hasTempApproval && policy != null) {
+        if (pkg !in CRITICAL_SYSTEM_PACKAGES && !hasTempApproval && policy != null && !managerExempt) {
             val blockedByList = policy.blockedApps.contains(pkg)
             val blockedByWhitelist = policy.appPolicyMode == AppPolicyMode.WHITELIST &&
                     !policy.allowedApps.contains(pkg)
@@ -212,9 +241,69 @@ class TetherAccessibilityService : AccessibilityService() {
             }
         }
 
+        // === Layer 1c: חבילת חסימה — every browser on the device ===
+        // The browser set is resolved from the system's http handlers (see BlockPack), so a browser
+        // the user installs tomorrow is covered without any policy change. This is the app-level
+        // half of the block: even with no Device Owner rights, opening a browser bounces Home.
+        if (policy != null && policy.blockedBrowsers && !hasTempApproval && !managerExempt &&
+            BlockPack.isBrowser(this, pkg)
+        ) {
+            if (canActOnPack()) {
+                Log.w(TAG, "Blocking browser: $pkg")
+                logEvent("BLOCKED_APP_OPENED", pkg)
+                maybeRequestApproval(pkg, blockedBehavior)
+                showPackMessage(BROWSER_BLOCK_MESSAGE, blockedBehavior)
+                performGlobalAction(GLOBAL_ACTION_HOME)
+            }
+            return
+        }
+
+        // === Layer 1d: חבילת חסימה — YouTube in every form ===
+        // 1) Every YouTube app variant (Kids / Music / TV / ReVanced / …), not just the main one.
+        if (policy != null && policy.blockedYoutube && !hasTempApproval && !managerExempt &&
+            BlockPack.isYoutube(pkg)
+        ) {
+            if (canActOnPack()) {
+                Log.w(TAG, "Blocking YouTube app: $pkg")
+                logEvent("BLOCKED_APP_OPENED", pkg)
+                maybeRequestApproval(pkg, blockedBehavior)
+                showPackMessage(YOUTUBE_BLOCK_MESSAGE, blockedBehavior)
+                performGlobalAction(GLOBAL_ACTION_HOME)
+            }
+            return
+        }
+
+        // 2) youtube.com opened inside a browser. Only reachable when browsers are still allowed —
+        //    if the whole bundle is on, Layer 1c already bounced this window. Only the address bar
+        //    is inspected (never page content), so a page that merely mentions YouTube is safe.
+        if (policy != null && policy.blockedYoutube && !policy.blockedBrowsers && !managerExempt &&
+            !hasTempApproval && BlockPack.isBrowser(this, pkg) && canScanUrl()
+        ) {
+            val root = rootInActiveWindow
+            if (root != null) {
+                val url = try {
+                    BlockPack.youtubeUrlInAddressBar(root)
+                } catch (e: Exception) {
+                    Log.e(TAG, "URL scan error: ${e.message}")
+                    null
+                } finally {
+                    runCatching { root.recycle() }
+                }
+                if (url != null && canActOnPack()) {
+                    Log.w(TAG, "Blocking YouTube in browser: $pkg ($url)")
+                    logEvent("BLOCKED_APP_OPENED", BlockPack.YOUTUBE_WEB_PSEUDO_PKG)
+                    showPackMessage(YOUTUBE_BLOCK_MESSAGE, blockedBehavior)
+                    // Back first: leaves the browser usable on the previous page instead of
+                    // bouncing the user out of the app entirely for one blocked tab.
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                }
+            }
+            // Deliberately no `return` — a browser window is still subject to the layers below.
+        }
+
         // === Layer 2: Block app stores when any relevant policy flag is set ===
-        if (pkg in APP_STORE_PACKAGES && !hasTempApproval) {
-            if (policy == null || policy.blockInstallApps || policy.blockAllStores) {
+        if (BlockPack.isStore(pkg) && !hasTempApproval && !managerExempt) {
+            if (policy == null || policy.blockedStores) {
                 Log.w(TAG, "Blocking app store: $pkg")
                 logEvent("BLOCKED_APP_OPENED", pkg)
                 maybeRequestApproval(pkg, blockedBehavior)
@@ -224,7 +313,7 @@ class TetherAccessibilityService : AccessibilityService() {
         }
 
         // === Layer 3: Block dangerous settings screens ===
-        if (pkg == "com.android.settings") {
+        if (pkg == "com.android.settings" && !managerExempt) {
             val className = event.className?.toString() ?: ""
             if (CRITICAL_SETTINGS_CLASSES.any { className.contains(it) }) {
                 Log.w(TAG, "Blocking critical settings: $className")
@@ -245,13 +334,35 @@ class TetherAccessibilityService : AccessibilityService() {
             return
         }
 
+        // === Layer 4: User-defined time-schedule blocks (local "App blocker" feature) ===
+        // Independent of community policy: the user schedules apps to be blocked during certain
+        // hours (e.g. at night). Only fires on window-state changes to avoid Home-bounce spam.
+        // Formerly a separate accessibility service (AppBlockerAccessibilityService); folded in
+        // here so the user only has to grant one accessibility permission.
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && pkg != OUR_PACKAGE) {
+            val activeSchedule = AppBlockerPrefs.getSchedules(this)
+                .firstOrNull { it.isActiveNow() && pkg in it.blockedPackages }
+            if (activeSchedule != null) {
+                Log.w(TAG, "Blocking scheduled app: $pkg")
+                logEvent("SCHEDULED_APP_BLOCKED", pkg)
+                performGlobalAction(GLOBAL_ACTION_HOME)
+                Toast.makeText(
+                    this,
+                    "חסום בין ${activeSchedule.formattedRange().replace("–", "ל-")}",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
+        }
+
         // === Layer 5: WhatsApp Status & Channels shield ===
         // Enabled either by admin policy OR by the local user-controlled shield (Settings toggle).
         // Detection is language-independent (resource-id / class tokens), so it works for every
         // UI language — see whatsAppStatusOrChannelMarker(). Covers WhatsApp + WhatsApp Business.
         if (pkg in WHATSAPP_PACKAGES) {
-            val shieldOn = policy?.blockWhatsAppChannels == true ||
-                    TetherPolicyManager.isWhatsAppShieldEnabled(this)
+            // Manager exempt: only the manager's OWN local shield toggle counts, not community policy.
+            val shieldOn = TetherPolicyManager.isWhatsAppShieldEnabled(this) ||
+                    (!managerExempt && policy?.blockWhatsAppChannels == true)
             if (!shieldOn) return
 
             // Throttle the noisy content-change stream (state-changes always pass through, so
@@ -273,6 +384,76 @@ class TetherAccessibilityService : AccessibilityService() {
                 }
             } finally {
                 root.recycle()
+            }
+            return
+        }
+
+        // === Layer 6: YouTube Shorts daily time limit (local self-restriction) ===
+        // Regular videos are unrestricted; only the Shorts ("reel") player accrues time toward the
+        // user's daily budget. When the budget is spent we bounce OUT of Shorts (Back) but leave
+        // the rest of YouTube usable. Detection is language-independent (resource-id / class tokens).
+        if (pkg in YOUTUBE_PACKAGES) {
+            if (!ShortsLimitPrefs.isEnabled(this)) {
+                shortsWatchingSince = 0L
+                return
+            }
+            // Throttle the noisy content-change stream; window-state changes always pass through.
+            if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED && !canScanShorts()) return
+
+            val root = rootInActiveWindow ?: return
+            val marker = try {
+                isYoutubeShortsOnScreen(event, root)
+            } catch (e: Exception) {
+                Log.e(TAG, "Shorts detection error: ${e.message}")
+                null
+            } finally {
+                root.recycle()
+            }
+            val inShorts = marker != null
+
+            val now = System.currentTimeMillis()
+            if (inShorts) {
+                // Log the detection transition (visible in the in-app diagnostic console / F12).
+                if (shortsWatchingSince == 0L) Log.i(TAG, "Shorts DETECTED (marker=$marker)")
+                // Telemetry: record (once per day) that Shorts detection is actually working on this
+                // device / YouTube build — shows up in the admin activity log.
+                logShortsDetectedOncePerDay()
+
+                // Accrue the elapsed wall-clock time since the last tick (capped, so an idle/backgrounded
+                // gap can't dump minutes at once).
+                if (shortsWatchingSince != 0L) {
+                    val delta = ((now - shortsWatchingSince) / 1000L).coerceIn(0L, SHORTS_MAX_TICK_SEC)
+                    if (delta > 0L) ShortsLimitPrefs.addSeconds(this, delta)
+                }
+                shortsWatchingSince = now
+
+                if (ShortsLimitPrefs.isOverLimit(this)) {
+                    if (canActOnShorts()) {
+                        Log.w(TAG, "YouTube Shorts daily limit reached — bouncing out")
+                        maybeLogShortsLimitReached()
+                        Toast.makeText(this, SHORTS_LIMIT_MESSAGE, Toast.LENGTH_LONG).show()
+                        performGlobalAction(GLOBAL_ACTION_BACK)
+                    }
+                } else {
+                    // Heads-up once, when the budget is about to run out.
+                    val remaining = ShortsLimitPrefs.remainingSeconds(this)
+                    if (remaining in 1..SHORTS_WARNING_SEC && !ShortsLimitPrefs.wasWarnedToday(this)) {
+                        ShortsLimitPrefs.markWarnedToday(this)
+                        logEvent("SHORTS_WARN_5MIN", SHORTS_PSEUDO_PKG)
+                        Toast.makeText(this, SHORTS_WARNING_MESSAGE, Toast.LENGTH_LONG).show()
+                    }
+                }
+            } else {
+                if (shortsWatchingSince != 0L) {
+                    Log.i(TAG, "Left Shorts (today used=${ShortsLimitPrefs.usedSecondsToday(this)}s)")
+                }
+                shortsWatchingSince = 0L
+                // Debug tuning aid: on a new (non-Shorts) YouTube screen, dump visible ids so the real
+                // Shorts ids of a given build can be confirmed from logcat if detection ever misses.
+                if (BuildConfig.DEBUG && event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                    Log.d(TAG, "YouTube screen (not Shorts)")
+                    debugDumpYoutubeIds()
+                }
             }
             return
         }
@@ -319,6 +500,111 @@ class TetherAccessibilityService : AccessibilityService() {
         if (now - lastWhatsAppActionTs < WHATSAPP_ACTION_COOLDOWN_MS) return false
         lastWhatsAppActionTs = now
         return true
+    }
+
+    /**
+     * Returns true if the active YouTube window is the Shorts ("reel") player. LANGUAGE-INDEPENDENT:
+     * inspects YouTube's internal resource-ids / class names rather than localized text.
+     */
+    /** Returns the matched marker (e.g. "id:reel_recycler") if the Shorts player is on screen, else null. */
+    private fun isYoutubeShortsOnScreen(event: AccessibilityEvent, root: AccessibilityNodeInfo): String? {
+        event.className?.toString()?.lowercase()?.let { cls ->
+            YOUTUBE_SHORTS_TOKENS.firstOrNull { cls.contains(it) }?.let { return "class:$it" }
+        }
+        return findShortsMarker(root, 0)
+    }
+
+    private fun findShortsMarker(node: AccessibilityNodeInfo?, depth: Int): String? {
+        if (node == null || depth > 25) return null
+        if (node.isVisibleToUser) {
+            node.viewIdResourceName?.lowercase()?.let { id ->
+                YOUTUBE_SHORTS_TOKENS.firstOrNull { id.contains(it) }?.let { return "id:$it" }
+            }
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findShortsMarker(child, depth + 1)
+            child.recycle()
+            if (found != null) return found
+        }
+        return null
+    }
+
+    private fun canScanShorts(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastShortsScanTs < SHORTS_SCAN_COOLDOWN_MS) return false
+        lastShortsScanTs = now
+        return true
+    }
+
+    private fun canActOnShorts(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastShortsActionTs < SHORTS_ACTION_COOLDOWN_MS) return false
+        lastShortsActionTs = now
+        return true
+    }
+
+    // ── חבילת חסימה helpers ──
+
+    /** Rate-limits the bundle's Home/Back bounces so one blocked window can't queue a burst. */
+    private fun canActOnPack(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastPackActionTs < PACK_ACTION_COOLDOWN_MS) return false
+        lastPackActionTs = now
+        return true
+    }
+
+    /** Rate-limits address-bar scans — they walk the node tree, so they can't run on every tick. */
+    private fun canScanUrl(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastUrlScanTs < PACK_URL_SCAN_COOLDOWN_MS) return false
+        lastUrlScanTs = now
+        return true
+    }
+
+    /**
+     * Shows the bundle's block message, honouring the admin's blockedActionBehavior: SILENT stays
+     * silent (the app just closes), and REQUEST_APPROVAL is handled by maybeRequestApproval, whose
+     * own popup would otherwise be duplicated here.
+     */
+    private fun showPackMessage(message: String, behavior: BlockedActionBehavior) {
+        if (behavior != BlockedActionBehavior.SHOW_MESSAGE) return
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    /** Emits a SHORTS_DETECTED telemetry event at most once per calendar day. */
+    private fun logShortsDetectedOncePerDay() {
+        val today = LocalDate.now().toString()
+        if (shortsDetectedLogDate == today) return
+        shortsDetectedLogDate = today
+        logEvent("SHORTS_DETECTED", SHORTS_PSEUDO_PKG)
+    }
+
+    /** Emits a SHORTS_LIMIT_REACHED telemetry event, throttled so it can't flood the admin log. */
+    private fun maybeLogShortsLimitReached() {
+        val now = System.currentTimeMillis()
+        if (now - lastShortsLimitLogTs < SHORTS_LIMIT_LOG_COOLDOWN_MS) return
+        lastShortsLimitLogTs = now
+        logEvent("SHORTS_LIMIT_REACHED", SHORTS_PSEUDO_PKG)
+    }
+
+    /**
+     * On-device tuning aid (debug builds only): dumps the visible YouTube resource-ids to logcat so
+     * a build's real Shorts ids can be confirmed and locked into YOUTUBE_SHORTS_TOKENS if detection
+     * ever misses on a particular YouTube version.
+     */
+    private fun debugDumpYoutubeIds() {
+        val now = System.currentTimeMillis()
+        if (now - lastShortsDebugTs < SHORTS_DEBUG_COOLDOWN_MS) return
+        lastShortsDebugTs = now
+        val root = rootInActiveWindow ?: return
+        try {
+            val ids = mutableListOf<String>()
+            collectVisibleIds(root, 0, ids)
+            if (ids.isNotEmpty()) Log.d(TAG, "YT visible ids: ${ids.distinct().take(40).joinToString()}")
+        } finally {
+            root.recycle()
+        }
     }
 
     /**

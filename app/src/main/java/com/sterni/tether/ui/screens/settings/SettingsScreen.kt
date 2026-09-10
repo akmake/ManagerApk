@@ -8,12 +8,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,7 +44,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onEmergencyClick: () -> Unit
+    onEmergencyClick: () -> Unit,
+    onSelfToolsClick: () -> Unit = {},
+    onDiagnosticsClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -218,6 +222,14 @@ fun SettingsScreen(
                 )
             }
 
+            item {
+                SettingsButton(
+                    icon = Icons.Default.Timer,
+                    label = "כלים עצמיים (מגבלת שורטס ועוד)",
+                    onClick = onSelfToolsClick
+                )
+            }
+
             item { Spacer(Modifier.height(28.dp)) }
             item { SectionTitle("תמיכה וניהול") }
 
@@ -226,6 +238,14 @@ fun SettingsScreen(
                     icon = Icons.Default.Mail,
                     label = "צור קשר עם המנהל",
                     onClick = { /* TODO */ }
+                )
+            }
+
+            item {
+                SettingsButton(
+                    icon = Icons.Default.BugReport,
+                    label = "יומן אבחון (קונסולה)",
+                    onClick = onDiagnosticsClick
                 )
             }
 
