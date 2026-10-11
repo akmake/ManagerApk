@@ -152,7 +152,14 @@ interface AdminApiService {
     suspend fun inviteAdmin(
         @Header("Authorization") token: String,
         @Body request: InviteAdminRequest
-    ): Response<Unit>
+    ): Response<AdminMember>
+
+    @PUT("tether/admin/communities/{id}/manager")
+    suspend fun assignCommunityManager(
+        @Header("Authorization") token: String,
+        @Path("id") communityId: String,
+        @Body body: Map<String, String>
+    ): Response<AdminCommunity>
 
     @DELETE("tether/admin/members/{id}")
     suspend fun removeAdmin(

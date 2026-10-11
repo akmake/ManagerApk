@@ -1,5 +1,7 @@
 package com.sterni.tether.ui.screens.join
 
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -34,7 +36,7 @@ fun EnrollmentSuccessScreen(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxSize().systemBarsPadding()
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -61,7 +63,7 @@ fun EnrollmentSuccessScreen(
         Text(
             text = "הצטרפת בהצלחה!",
             fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
 

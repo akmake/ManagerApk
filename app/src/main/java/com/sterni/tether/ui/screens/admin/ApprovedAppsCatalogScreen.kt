@@ -1,5 +1,13 @@
 package com.sterni.tether.ui.screens.admin
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherSwitch as Switch
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,21 +28,14 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue

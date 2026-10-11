@@ -1,5 +1,8 @@
 package com.sterni.tether.ui.screens.tefila
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -23,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sterni.tether.ui.theme.*
 
-private val STUDY_BG = Color(0xFFFDFBF7)
+private val STUDY_BG = Color(0xFFFFFFFF)
 
 private val EIZEHU_PARAGRAPHS = listOf(
     "א אֵיזֶהוּ מְקוֹמָן שֶׁל זְבָחִים, קָדְשֵׁי קָדָשִׁים שְׁחִיטָתָן בַּצָּפוֹן. פָּר וְשָׂעִיר שֶׁל יוֹם הַכִּפּוּרִים שְׁחִיטָתָן בַּצָּפוֹן, וְקִבּוּל דָּמָן בִּכְלִי שָׁרֵת בַּצָּפוֹן, וְדָמָן טָעוּן הַזָּיָה עַל בֵּין הַבַּדִּים, וְעַל הַפָּרֹכֶת, וְעַל מִזְבַּח הַזָּהָב. מַתָּנָה אַחַת מֵהֶן מְעַכָּבֶת. שְׁיָרֵי הַדָּם הָיָה שׁוֹפֵךְ עַל יְסוֹד מַעֲרָבִי שֶׁל מִזְבֵּחַ הַחִיצוֹן, אִם לֹא נָתַן לֹא עִכֵּב:",
@@ -49,7 +52,7 @@ fun EizVehuScreen(onBack: () -> Unit) {
                     Text(
                         "איזהו מקומן",
                         fontFamily = BaHaYetzira,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize   = 20.sp,
                         color      = Primary
                     )
@@ -82,7 +85,7 @@ private fun EizVehuParagraph(text: String) {
     val rest       = if (firstSpace >= 0) text.substring(firstSpace) else ""
 
     val annotated = buildAnnotatedString {
-        withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.Bold)) { append(firstWord) }
+        withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.SemiBold)) { append(firstWord) }
         append(rest)
     }
 

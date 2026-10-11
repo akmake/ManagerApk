@@ -1,5 +1,11 @@
 package com.sterni.tether.ui.screens.admin
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,19 +27,14 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Badge
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -176,7 +177,7 @@ private fun ApprovalCard(
                 Icon(
                     Icons.Default.AppRegistration,
                     null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(Modifier.width(8.dp))
@@ -190,7 +191,7 @@ private fun ApprovalCard(
             Spacer(Modifier.height(4.dp))
             Text("מכשיר: ${approval.deviceId.take(8)}...", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("פעולה: ${approval.action}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(approval.requestedAt, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(approval.requestedAt, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             if (isAppAccess) {
                 Spacer(Modifier.height(10.dp))
@@ -201,7 +202,7 @@ private fun ApprovalCard(
                         FilterChip(
                             selected = selectedGrantMinutes == minutes,
                             onClick = { selectedGrantMinutes = minutes },
-                            label = { Text("$minutes", fontSize = 11.sp) }
+                            label = { Text("$minutes", fontSize = 12.sp) }
                         )
                     }
                 }

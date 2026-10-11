@@ -1,5 +1,7 @@
 package com.sterni.tether.ui.screens.onboarding
 
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -38,7 +40,7 @@ private val pages = listOf(
     OnboardingPage(
         icon = Icons.Default.Lock,
         title = "הגנה ברמת המערכת",
-        subtitle = "Tether עובד ברמת מערכת ההפעלה — לא ניתן לעקוף, לא ניתן להסיר, עובד גם בלי אינטרנט"
+        subtitle = "חסימות לפי מדיניות הקהילה, עם הגנה ברמת המערכת ועבודה גם ללא חיבור לאינטרנט"
     ),
     OnboardingPage(
         icon = Icons.Default.People,
@@ -55,7 +57,7 @@ fun OnboardingScreen(onFinished: () -> Unit) {
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxSize().systemBarsPadding()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -135,7 +137,7 @@ private fun OnboardingPageContent(page: OnboardingPage) {
                 Icon(
                     imageVector = page.icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(56.dp)
                 )
             }
@@ -146,7 +148,7 @@ private fun OnboardingPageContent(page: OnboardingPage) {
         Text(
             text = page.title,
             fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground
         )

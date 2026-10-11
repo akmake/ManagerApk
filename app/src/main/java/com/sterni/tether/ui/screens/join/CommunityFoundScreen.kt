@@ -1,6 +1,12 @@
 package com.sterni.tether.ui.screens.join
 
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
@@ -33,7 +39,7 @@ fun CommunityFoundScreen(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxSize().systemBarsPadding().imePadding().verticalScroll(rememberScrollState())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -45,13 +51,13 @@ fun CommunityFoundScreen(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.People, null,
-                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(48.dp))
             }
         }
 
         Spacer(Modifier.height(24.dp))
         Text("נמצאה קהילה!", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(communityName, fontSize = 28.sp, fontWeight = FontWeight.Bold,
+        Text(communityName, fontSize = 28.sp, fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center)
 
         Spacer(Modifier.height(32.dp))

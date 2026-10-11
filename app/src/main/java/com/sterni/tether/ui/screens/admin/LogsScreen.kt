@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.admin
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -121,7 +125,7 @@ private fun LogRow(log: LogEntry) {
                 Text(log.packageName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text("${log.deviceModel ?: log.deviceId.take(8)}  •  ${log.timestamp}",
-                fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))

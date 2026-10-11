@@ -1,5 +1,13 @@
 package com.sterni.tether.ui.screens.admin
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as ElevatedCard
+import com.sterni.tether.ui.components.TetherSwitch as Switch
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.app.Application
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
@@ -285,7 +293,7 @@ fun DeviceDetailScreen(
                                 }
                             }
                             if (device?.deviceNickname != null) {
-                                Text(device!!.deviceModel, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(device!!.deviceModel, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -388,7 +396,7 @@ private fun ProtectionChip(label: String, active: Boolean, modifier: Modifier = 
                 modifier = Modifier.size(10.dp),
                 tint = if (active) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error
             )
-            Text(label, fontSize = 11.sp,
+            Text(label, fontSize = 12.sp,
                 color = if (active) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error)
         }
     }
@@ -420,7 +428,7 @@ private fun DeviceStatusHeader(
                 ProtectionChip("VPN", device.protectionStatus.vpnActive, Modifier.weight(1f))
                 if (device.isDeviceOwner) {
                     Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.weight(1f)) {
-                        Text("DO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary,
+                        Text("DO", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp))
                     }
                 }
@@ -541,7 +549,7 @@ private fun AppRow(app: InstalledApp, isBlocked: Boolean, onToggleBlock: (Boolea
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(app.appName.ifEmpty { app.packageName }, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                Text(app.packageName, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(app.packageName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Switch(
                 checked = isBlocked,
@@ -561,7 +569,7 @@ private fun AppRow(app: InstalledApp, isBlocked: Boolean, onToggleBlock: (Boolea
 // ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
-private fun DevicePolicyTab(
+internal fun DevicePolicyTab(
     policy: DevicePolicy,
     saving: Boolean,
     onSave: (DevicePolicy) -> Unit
@@ -595,18 +603,18 @@ private fun DevicePolicyTab(
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
-                            Icon(Icons.Default.Block, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Block, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("חסימות למכשיר", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         }
                         HorizontalDivider(Modifier.padding(bottom = 12.dp))
 
-                        NullablePolicyRow("🛡 חבילת חסימה (הכל יחד)", edited.blockPack) {
+                        NullablePolicyRow("חבילת חסימה (הכל יחד)", edited.blockPack) {
                             edited = edited.copy(blockPack = it)
                         }
                         Text(
                             "דפדפנים + יוטיוב + התקנות חיצוניות + כל החנויות",
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 6.dp)
                         )
@@ -653,7 +661,7 @@ private fun DevicePolicyTab(
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 2.dp)) {
-                            Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("התנהגות ופרטי ניהול", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         }
@@ -720,7 +728,7 @@ private fun DevicePolicyTab(
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
-                            Icon(Icons.Default.Apps, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Apps, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("אפליקציות", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         }
@@ -744,7 +752,7 @@ private fun DevicePolicyTab(
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 2.dp)) {
-                            Icon(Icons.Default.Language, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Language, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("סינון רשת", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         }
@@ -789,7 +797,7 @@ private fun DevicePolicyTab(
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
-                            Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("נעילות זמן", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         }
@@ -837,18 +845,19 @@ private fun DevicePolicyTab(
 
 @Composable
 private fun NullablePolicyRow(label: String, value: Boolean?, onChange: (Boolean?) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        val options = listOf(null, true, false)
-        val labels = listOf("ירושה", "כן", "לא")
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            options.forEachIndexed { index, option ->
-                FilterChip(
-                    selected = value == option,
-                    onClick = { onChange(option) },
-                    label = { Text(labels[index], fontSize = 11.sp) },
-                    modifier = Modifier.height(28.dp)
-                )
+    var expanded by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().heightIn(min = 58.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Box {
+            TextButton(onClick = { expanded = true }) {
+                Text(when (value) { null -> "לפי הקהילה"; true -> "מופעל"; false -> "כבוי" },
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.Default.ExpandMore, null, modifier = Modifier.size(18.dp))
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                listOf("לפי הקהילה" to null, "מופעל" to true, "כבוי" to false).forEach { (title, choice) ->
+                    DropdownMenuItem(text = { Text(title) }, onClick = { onChange(choice); expanded = false })
+                }
             }
         }
     }
@@ -865,7 +874,7 @@ private fun <T> NullableEnumChipRow(
             FilterChip(
                 selected = current == option,
                 onClick = { onSelect(option) },
-                label = { Text(label, fontSize = 11.sp) }
+                label = { Text(label, fontSize = 12.sp) }
             )
         }
     }
@@ -956,10 +965,10 @@ private fun SecurityEventsTab(events: List<SecurityEvent>) {
                             fontSize = 13.sp, fontWeight = FontWeight.Medium
                         )
                         if (!event.packageName.isNullOrEmpty()) {
-                            Text(event.packageName, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(event.packageName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(event.timestamp.take(19).replace("T", " "),
-                            fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -1035,7 +1044,7 @@ private fun DeviceAppTimeLocksSection(locks: List<AppTimeLock>, onChange: (List<
                 Column(Modifier.weight(1f)) {
                     Text(lock.packageName, fontSize = 13.sp)
                     Text(if (lock.lockedUntilTs == null) "חסום לצמיתות" else "חסום עד: ${sdf.format(Date(lock.lockedUntilTs))}",
-                        fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(onClick = {
                     val cal = Calendar.getInstance()
@@ -1087,4 +1096,3 @@ private fun SimpleAppListSection(title: String, apps: List<String>, onChange: (L
         }
     }
 }
-

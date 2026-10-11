@@ -1,5 +1,10 @@
 package com.sterni.tether.ui.screens.mamaarim
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -63,7 +68,7 @@ fun ArticleUploadScreen(
                             text       = "העלאת מאמר",
                             modifier   = Modifier.weight(1f),
                             fontSize   = 20.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             fontFamily = BaHaYetzira,
                             color      = Primary,
                             textAlign  = TextAlign.Center
@@ -122,7 +127,7 @@ fun ArticleUploadScreen(
                                 val selected = extractionMode == mode
                                 OutlinedButton(
                                     onClick = { vm.extractionMode.value = mode },
-                                    shape   = RoundedCornerShape(10.dp),
+                                    shape   = RoundedCornerShape(18.dp),
                                     colors  = ButtonDefaults.outlinedButtonColors(
                                         containerColor = if (selected) Primary else Color.Transparent,
                                         contentColor   = if (selected) Color.White else Primary
@@ -150,7 +155,7 @@ fun ArticleUploadScreen(
                         Button(
                             onClick = { pdfPicker.launch("application/pdf") },
                             colors  = ButtonDefaults.buttonColors(containerColor = Primary),
-                            shape   = RoundedCornerShape(12.dp)
+                            shape   = RoundedCornerShape(18.dp)
                         ) {
                             Text("בחר PDF", fontSize = 16.sp)
                         }
@@ -204,7 +209,7 @@ fun ArticleUploadScreen(
                             label         = { Text("כותרת המאמר") },
                             modifier      = Modifier.fillMaxWidth(),
                             singleLine    = true,
-                            shape         = RoundedCornerShape(10.dp)
+                            shape         = RoundedCornerShape(18.dp)
                         )
 
                         Text(
@@ -225,7 +230,7 @@ fun ArticleUploadScreen(
                                 color      = Ink,
                                 lineHeight = 22.sp
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(18.dp)
                         )
 
                         Row(
@@ -235,7 +240,7 @@ fun ArticleUploadScreen(
                             OutlinedButton(
                                 onClick  = { vm.save(uploadToServer = false) },
                                 modifier = Modifier.weight(1f),
-                                shape    = RoundedCornerShape(10.dp),
+                                shape    = RoundedCornerShape(18.dp),
                                 colors   = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
                             ) { Text("שמור למכשיר (אופליין)") }
 
@@ -243,7 +248,7 @@ fun ArticleUploadScreen(
                                 onClick  = { vm.save(uploadToServer = true) },
                                 modifier = Modifier.weight(1f),
                                 colors   = ButtonDefaults.buttonColors(containerColor = Primary),
-                                shape    = RoundedCornerShape(10.dp)
+                                shape    = RoundedCornerShape(18.dp)
                             ) { Text("שתף לשרת") }
                         }
 

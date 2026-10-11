@@ -1,8 +1,12 @@
 package com.sterni.tether.ui.screens.join
 
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -54,7 +58,7 @@ fun JoinCommunityScreen(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxSize().systemBarsPadding().imePadding().verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -62,9 +66,9 @@ fun JoinCommunityScreen(
 
         Text(
             text = "Tether",
-            fontSize = 36.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.combinedClickable(
                 onClick = {
                     logoTapCount++
@@ -107,6 +111,8 @@ fun JoinCommunityScreen(
             state = state,
             onVerify = { vm.verifyCode(it) }
         )
+        Spacer(Modifier.height(16.dp))
+        TextButton(onClick = onEnterAdmin) { Text("כניסה למנהל קהילה") }
     }
 }
 

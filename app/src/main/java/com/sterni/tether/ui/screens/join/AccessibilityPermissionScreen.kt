@@ -1,5 +1,8 @@
 package com.sterni.tether.ui.screens.join
 
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
@@ -8,6 +11,8 @@ import android.os.Build
 import android.provider.Settings
 import android.text.TextUtils
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.CheckCircle
@@ -81,7 +86,7 @@ fun AccessibilityPermissionScreen(onGranted: () -> Unit) {
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxSize().systemBarsPadding().imePadding().verticalScroll(rememberScrollState())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -95,10 +100,10 @@ fun AccessibilityPermissionScreen(onGranted: () -> Unit) {
             )
             Spacer(Modifier.height(24.dp))
             Text("שלב ראשון", fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(6.dp))
-            Text("אפשר הגדרות מוגבלות", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text("אפשר הגדרות מוגבלות", fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
             Text(
                 "ב-Android 13 ומעלה, אפליקציות שלא הותקנו מ-Play Store דורשות אישור מיוחד לפני הפעלת שירות נגישות.",
@@ -147,7 +152,7 @@ fun AccessibilityPermissionScreen(onGranted: () -> Unit) {
             Text(
                 text = if (isGranted) "הרשאה אושרה!" else "הרשאת נגישות",
                 fontSize = 26.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(12.dp))
             Text(
@@ -198,7 +203,7 @@ private fun StepItem(number: String, text: String) {
             Text(
                 number,
                 color = MaterialTheme.colorScheme.onPrimary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
             )

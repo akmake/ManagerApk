@@ -1,5 +1,12 @@
 package com.sterni.tether.ui.screens.admin
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherSwitch as Switch
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,6 +32,7 @@ import com.sterni.tether.data.model.AdminCommunity
 import com.sterni.tether.data.model.BlockedActionBehavior
 import com.sterni.tether.data.model.CommunityPolicy
 import com.sterni.tether.data.model.CreateCommunityRequest
+import com.sterni.tether.ui.components.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -149,6 +157,31 @@ private fun StepPolicy(policy: CommunityPolicy, onChange: (CommunityPolicy) -> U
     ) {
         Spacer(Modifier.height(8.dp))
 
+        PolicySection("חבילת חסימה") {
+            PolicyToggle("הפעל חבילת חסימה מלאה", policy.blockPack) {
+                onChange(policy.copy(blockPack = it))
+            }
+            Text(
+                "כפתור אחד: כל הדפדפנים (כולל כאלה שיותקנו בעתיד) + יוטיוב בכל צורה " +
+                    "(Kids/Music/ReVanced ו-youtube.com בדפדפן) + התקנות חיצוניות + כל החנויות",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            PolicyToggle("חסום את כל הדפדפנים", policy.blockAllBrowsers) {
+                onChange(policy.copy(blockAllBrowsers = it))
+            }
+            PolicyToggle("חסום יוטיוב בכל צורה", policy.blockYoutube) {
+                onChange(policy.copy(blockYoutube = it))
+            }
+            PolicyToggle("חסום את כל החנויות", policy.blockAllStores) {
+                onChange(policy.copy(blockAllStores = it))
+            }
+            PolicyToggle("חסום התקנת APK ידנית", policy.blockApkInstall) {
+                onChange(policy.copy(blockApkInstall = it))
+            }
+        }
+
         PolicySection("חסימות") {
             PolicyToggle("חסום התקנת אפליקציות", policy.blockInstallApps) {
                 onChange(policy.copy(blockInstallApps = it))
@@ -260,20 +293,17 @@ private fun StepConfirm(
 
 @Composable
 fun PolicySection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Text(title, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
-        color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(8.dp), content = content)
-    }
+    TetherSectionTitle(title)
+    TetherSettingsGroup(content = content)
 }
 
 @Composable
 fun PolicyToggle(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, modifier = Modifier.weight(1f), fontSize = 14.sp)
+        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         Switch(checked = checked, onCheckedChange = onToggle)
     }
 }

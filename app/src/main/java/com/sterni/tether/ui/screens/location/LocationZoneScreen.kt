@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.location
 
+import com.sterni.tether.ui.components.TetherSwitch as Switch
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
@@ -97,7 +101,7 @@ fun LocationZoneScreen(
             .fillMaxSize()
             .background(BgColor)
     ) {
-        Surface(shadowElevation = 0.dp, color = Color(0xFFFDFBF7)) {
+        Surface(shadowElevation = 0.dp, color = Color(0xFFFFFFFF)) {
             Column {
                 Spacer(Modifier.statusBarsPadding())
                 Row(
@@ -112,7 +116,7 @@ fun LocationZoneScreen(
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Center,
                         fontSize = 19.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = Primary
                     )
                     Spacer(Modifier.width(48.dp))
@@ -168,7 +172,7 @@ fun LocationZoneScreen(
 
         Surface(
             modifier        = Modifier.fillMaxWidth().weight(0.45f).navigationBarsPadding(),
-            color           = Color(0xFFFDFBF7),
+            color           = Color(0xFFFFFFFF),
             shape           = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             shadowElevation = 8.dp
         ) {
@@ -229,7 +233,7 @@ private fun ZoneRow(zone: SilentZone, onToggle: () -> Unit, onDelete: () -> Unit
         Switch(checked = zone.active, onCheckedChange = { onToggle() })
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(zone.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ink)
+            Text(zone.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Ink)
             Text("${zone.radiusMeters.toInt()} מטר", fontSize = 13.sp, color = Muted)
         }
         IconButton(onClick = onDelete) {
@@ -244,7 +248,7 @@ private fun AddZoneDialog(latLng: LatLng, onConfirm: (name: String, radius: Floa
     var radius by remember { mutableFloatStateOf(100f) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("הוסף אזור שקט", fontWeight = FontWeight.Bold, color = Primary) },
+        title = { Text("הוסף אזור שקט", fontWeight = FontWeight.SemiBold, color = Primary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("שם האזור") }, singleLine = true, modifier = Modifier.fillMaxWidth())

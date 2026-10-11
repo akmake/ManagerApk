@@ -1,5 +1,10 @@
 package com.sterni.tether.ui.screens.store
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,7 +30,7 @@ import com.sterni.tether.data.model.ApprovedApp
 import com.sterni.tether.ui.theme.*
 import kotlinx.coroutines.launch
 
-private val BgOffWhite = Color(0xFFF8F6F2)
+private val BgOffWhite = Color(0xFFFFFFFF)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,7 +121,7 @@ fun AppStoreItem(app: ApprovedApp) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -126,18 +131,18 @@ fun AppStoreItem(app: ApprovedApp) {
         ) {
             Surface(
                 modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = BgOffWhite
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(app.appName.take(1), fontWeight = FontWeight.Bold, color = Primary, fontFamily = BaHaYetzira)
+                    Text(app.appName.take(1), fontWeight = FontWeight.SemiBold, color = Primary, fontFamily = BaHaYetzira)
                 }
             }
 
             Spacer(Modifier.width(16.dp))
 
             Column(Modifier.weight(1f)) {
-                Text(app.appName, fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = SblHebrew, color = Ink)
+                Text(app.appName, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, fontFamily = SblHebrew, color = Ink)
                 Text(
                     if (isInstalled) {
                         if (needsUpdate) "עדכון זמין" else "מותקן"
@@ -160,7 +165,7 @@ fun AppStoreItem(app: ApprovedApp) {
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(18.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     Text(if (needsUpdate) "עדכן" else "התקן", fontSize = 13.sp, fontFamily = SblHebrew)

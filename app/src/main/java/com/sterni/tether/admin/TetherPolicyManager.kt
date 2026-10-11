@@ -17,8 +17,10 @@ import com.sterni.tether.data.model.AppPolicyMode
 import com.sterni.tether.data.model.AppTimeLock
 import com.sterni.tether.data.model.BlockedActionBehavior
 import com.sterni.tether.data.model.CommunityPolicy
+import com.sterni.tether.data.model.blockedBrowsers
 import com.sterni.tether.data.model.blockedExternalInstalls
 import com.sterni.tether.data.model.blockedStores
+import com.sterni.tether.data.model.blockedYoutube
 
 import android.content.Intent
 import com.sterni.tether.data.model.WebFilterMode
@@ -135,6 +137,17 @@ object TetherPolicyManager {
             // pass below — a package missing from one of them is a package that gets un-suspended
             // again on the next sync.
             val packBlocked = BlockPack.blockedPackages(context, policy)
+
+            // Printed on every policy application so the in-app diagnostics console can answer the
+            // first question in any "it isn't blocking" report: did the switch actually arrive?
+            // A device whose server has not shipped these fields yet reports every flag false here.
+            Log.i(
+                TAG,
+                "BlockPack state → pack=${policy.blockPack} browsers=${policy.blockedBrowsers} " +
+                    "youtube=${policy.blockedYoutube} stores=${policy.blockedStores} " +
+                    "extInstalls=${policy.blockedExternalInstalls} | " +
+                    "${packBlocked.size} packages targeted"
+            )
 
             applyInstallRestriction(dpm, context, policy.blockInstallApps, allowUninstall)
             applyExternalInstallRestriction(dpm, context, policy.blockedExternalInstalls)
@@ -316,8 +329,22 @@ object TetherPolicyManager {
 
         additionalBlockedApps.forEach { pkg ->
             runCatching {
-                dpm.setApplicationHidden(admin, pkg, true)
-                dpm.setPackagesSuspended(admin, arrayOf(pkg), true)
+                // Both calls report failure by RETURN VALUE, not by throwing: setApplicationHidden
+                // returns false, and setPackagesSuspended returns the packages it refused. Ignoring
+                // them made a protected OEM system app (a built-in browser, typically) look
+                // successfully blocked while it kept running. Log it instead — that message is the
+                // difference between "the block is broken" and "this one package needs the
+                // accessibility backstop".
+                val hidden = dpm.setApplicationHidden(admin, pkg, true)
+                val refused = dpm.setPackagesSuspended(admin, arrayOf(pkg), true)
+                if (!hidden || refused.isNotEmpty()) {
+                    Log.w(
+                        TAG,
+                        "DPM could not fully restrict $pkg (hidden=$hidden, " +
+                            "suspendRefused=${refused.joinToString()}) — " +
+                            "accessibility backstop is now the only thing blocking it"
+                    )
+                }
             }.onFailure { Log.e(TAG, "Failed to restrict $pkg: ${it.message}") }
         }
     }
@@ -381,6 +408,14 @@ object TetherPolicyManager {
      */
     fun isWhatsAppShieldEnabled(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_WHATSAPP_SHIELD, false)
+
+    fun isWhatsAppBlockedLocally(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("user_block_whatsapp", false)
+
+    fun setWhatsAppBlockedLocally(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean("user_block_whatsapp", enabled).apply()
+    }
 
     fun setWhatsAppShieldEnabled(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
@@ -753,7 +788,10 @@ object TetherPolicyManager {
         val admin = ComponentName(context, TetherDeviceAdminReceiver::class.java)
         try {
             val pm = context.packageManager
-            val allApps = pm.getInstalledApplications(0)
+            // Include installed apps previously hidden by this owner, so correcting a false
+            // browser/store classification actually releases them on the next policy sync.
+            val allApps = pm.getInstalledApplications(PackageManager.MATCH_UNINSTALLED_PACKAGES)
+                .filter { it.flags and android.content.pm.ApplicationInfo.FLAG_INSTALLED != 0 }
 
             // אפליקציות מערכת קריטיות — לעולם לא מושהות, אחרת המכשיר מתקלקל.
             // Chrome used to sit in this set, which silently defeated any attempt to block it:
@@ -893,7 +931,5 @@ object TetherPolicyManager {
         }
     }
 }
-
-
 
 

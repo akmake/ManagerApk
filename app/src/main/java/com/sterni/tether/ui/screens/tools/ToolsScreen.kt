@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.tools
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,7 +41,7 @@ fun ToolsScreen(
                     Text(
                         "כלים",
                         fontFamily = BaHaYetzira,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
                 },
                 navigationIcon = {
@@ -132,7 +136,7 @@ private fun ToolCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = accentColor.copy(alpha = 0.12f),
                 modifier = Modifier.size(52.dp)
             ) {
@@ -152,7 +156,7 @@ private fun ToolCard(
                 Text(
                     text = title,
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     fontFamily = SblHebrew,
                     color = MaterialTheme.colorScheme.onSurface
                 )

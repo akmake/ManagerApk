@@ -1,5 +1,10 @@
 package com.sterni.tether.ui.screens.permissions
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -26,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.sterni.tether.admin.AppUsageTracker
 import com.sterni.tether.admin.TetherDeviceAdminReceiver
 import com.sterni.tether.ui.screens.join.isAccessibilityEnabled
 
@@ -84,7 +90,7 @@ fun PermissionsCenterScreen(onBack: () -> Unit) {
                 Text(
                     "$grantedCount / ${items.size} מאושרות",
                     fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = if (allGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
@@ -113,7 +119,7 @@ private fun PermRow(item: PermItem) {
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(item.title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 Text(
                     item.description,
                     fontSize = 12.sp,
@@ -122,7 +128,7 @@ private fun PermRow(item: PermItem) {
             }
             Spacer(Modifier.width(12.dp))
             if (item.granted) {
-                Text("מאושר", color = Color(0xFF2E7D32), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("מאושר", color = Color(0xFF2E7D32), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             } else {
                 Button(onClick = item.onGrant) { Text("אשר") }
             }
@@ -179,6 +185,13 @@ private fun buildPermItems(context: Context): List<PermItem> {
         description = "קריאת התראות של חנויות/מתקינים לחסימה.",
         granted = listeners.contains(pkg),
         onGrant = { open(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")) }
+    )
+
+    list += PermItem(
+        title = "גישה לנתוני שימוש",
+        description = "דוח למנהל: איזו אפליקציה נפתחה, מתי וכמה זמן. גם מגלה דפדפנים נסתרים.",
+        granted = AppUsageTracker.hasPermission(context),
+        onGrant = { open(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
     )
 
     list += PermItem(

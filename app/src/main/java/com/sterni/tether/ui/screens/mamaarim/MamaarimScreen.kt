@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.mamaarim
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -83,7 +87,7 @@ fun MamaarimScreen(
                             text = "מאמרים",
                             modifier = Modifier.weight(1f),
                             fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             fontFamily = BaHaYetzira,
                             color = Primary
                         )
@@ -185,7 +189,7 @@ fun MamaarimScreen(
                             fontSize = 14.sp,
                             textAlign = TextAlign.Right
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(18.dp)
                     )
                 }
             },
@@ -240,7 +244,7 @@ private fun MamaarimEmptyState(onRefresh: () -> Unit) {
             Text(
                 text = "אין מאמרים עדיין",
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontFamily = BaHaYetzira,
                 color = Ink
             )
@@ -267,8 +271,8 @@ private fun MamaarimEmptyState(onRefresh: () -> Unit) {
 @Composable
 private fun MamaarCard(mamaar: Mamaar, onClick: () -> Unit, onEdit: () -> Unit, onEditContent: () -> Unit, onDelete: () -> Unit) {
     Surface(
-        modifier        = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick),
-        shape           = RoundedCornerShape(12.dp),
+        modifier        = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick),
+        shape           = RoundedCornerShape(18.dp),
         shadowElevation = 1.dp,
         color           = CardBg
     ) {
@@ -287,7 +291,7 @@ private fun MamaarCard(mamaar: Mamaar, onClick: () -> Unit, onEdit: () -> Unit, 
                 Text(
                     text       = mamaar.title,
                     fontSize   = 16.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     fontFamily = BaHaYetzira,
                     color      = Ink,
                     maxLines   = 2,

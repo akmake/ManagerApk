@@ -1,5 +1,7 @@
 package com.sterni.tether.ui.screens.calendar
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -227,7 +229,7 @@ private fun CalendarTopBar(
             Text(
                 text       = mainLabel,
                 fontSize   = 20.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontFamily = HebrewFont,
                 color      = Ink,
                 maxLines   = 1
@@ -261,7 +263,7 @@ private fun CalendarTopBar(
             // Mode Toggles (Hebrew / Gregorian)
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(18.dp))
                     .background(LineColor.copy(alpha = 0.5f))
                     .padding(2.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -277,7 +279,7 @@ private fun CalendarTopBar(
                         text       = "לועזי",
                         modifier   = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         fontSize   = 12.sp,
-                        fontWeight = if (!state.hebrewMode) FontWeight.Bold else FontWeight.Medium,
+                        fontWeight = if (!state.hebrewMode) FontWeight.SemiBold else FontWeight.Medium,
                         fontFamily = HebrewFont,
                         color      = if (!state.hebrewMode) Primary else Muted
                     )
@@ -294,7 +296,7 @@ private fun CalendarTopBar(
                         text       = "עברי",
                         modifier   = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         fontSize   = 12.sp,
-                        fontWeight = if (state.hebrewMode) FontWeight.Bold else FontWeight.Medium,
+                        fontWeight = if (state.hebrewMode) FontWeight.SemiBold else FontWeight.Medium,
                         fontFamily = HebrewFont,
                         color      = if (state.hebrewMode) Primary else Muted
                     )
@@ -343,7 +345,7 @@ private fun MonthDayCell(
             Text(
                 text       = mainText,
                 fontSize   = 14.sp,
-                fontWeight = if (day.isToday) FontWeight.Bold else FontWeight.Normal,
+                fontWeight = if (day.isToday) FontWeight.SemiBold else FontWeight.Normal,
                 fontFamily = HebrewFont,
                 color      = numberColor,
                 textAlign  = TextAlign.Center
@@ -399,7 +401,7 @@ private fun CalEventChip(ev: CalEvent) {
         Text(
             text     = label,
             modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.5.dp),
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             color    = textColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -439,7 +441,7 @@ private fun DayDetailSheet(
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             // Header Content
             Column(modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)) {
-                Text(hebrewDate, fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = HebrewFont, color = Primary)
+                Text(hebrewDate, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, fontFamily = HebrewFont, color = Primary)
                 Text(gregLabel, fontSize = 15.sp, color = Muted, fontFamily = HebrewFont)
             }
             
@@ -608,7 +610,7 @@ private fun DayDetailSheet(
                                     if (evHeight > 30) {
                                         Text(
                                             text = "$startFormat - $endFormat",
-                                            fontSize = 11.sp,
+                                            fontSize = 12.sp,
                                             fontFamily = HebrewFont,
                                             color = c.copy(alpha = 0.8f),
                                             maxLines = 1,
@@ -720,16 +722,16 @@ private fun CalendarDrawer(
             .padding(horizontal = 20.dp, vertical = 24.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("לוח שנה", fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = HebrewFont, color = Primary)
+        Text("לוח שנה", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, fontFamily = HebrewFont, color = Primary)
         Spacer(Modifier.height(20.dp))
 
         // Hebrew/Gregorian toggle
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(18.dp))
                 .clickable { onToggleHebrew(); onClose() },
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(18.dp),
             color = if (hebrewMode) Primary.copy(alpha = 0.08f) else Color.Transparent
         ) {
             Row(
@@ -742,7 +744,7 @@ private fun CalendarDrawer(
                     color    = Primary.copy(alpha = 0.1f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("עב", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Primary, fontFamily = HebrewFont)
+                        Text("עב", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Primary, fontFamily = HebrewFont)
                     }
                 }
                 Spacer(Modifier.width(12.dp))
@@ -760,9 +762,9 @@ private fun CalendarDrawer(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(18.dp))
                 .clickable { onRefresh(); onClose() },
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(18.dp),
             color = Color.Transparent
         ) {
             Row(
@@ -803,9 +805,9 @@ private fun CalendarDrawer(
                 Surface(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(18.dp))
                         .clickable { onSetReminder(mins) },
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(18.dp),
                     color = if (selected) Primary.copy(alpha = 0.12f) else BgColor,
                     border = if (selected) androidx.compose.foundation.BorderStroke(1.dp, Primary.copy(alpha = 0.5f)) else null
                 ) {
@@ -816,7 +818,7 @@ private fun CalendarDrawer(
                         fontSize = 12.sp,
                         fontFamily = HebrewFont,
                         color = if (selected) Primary else Muted,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
                     )
                 }
             }
@@ -855,7 +857,7 @@ private fun CalendarCheckRow(cal: CalendarInfo, onToggle: () -> Unit) {
         Spacer(Modifier.width(8.dp))
         Column {
             Text(cal.name, fontSize = 14.sp, fontFamily = HebrewFont, color = Ink)
-            Text(cal.accountName, fontSize = 11.sp, color = Muted, fontFamily = HebrewFont)
+            Text(cal.accountName, fontSize = 12.sp, color = Muted, fontFamily = HebrewFont)
         }
     }
 }

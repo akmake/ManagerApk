@@ -67,6 +67,25 @@ class PolicySyncWorker(
                 // דיווח הרשימה המלאה לשרת
                 api.reportApps(deviceId, ReportAppsRequest(deviceId = deviceId, installedApps = installed))
                 
+                // Foreground app-usage sessions — what actually ran on this device, when, and for
+                // how long. The watermark is only committed after the POST succeeds, so a failed
+                // upload is retried on the next sync instead of leaving a hole in the report.
+                val usage = com.sterni.tether.admin.AppUsageTracker.collect(context)
+                if (usage.isNotEmpty()) {
+                    val usageRes = runCatching {
+                        api.reportUsage(
+                            deviceId,
+                            com.sterni.tether.data.model.ReportUsageRequest(deviceId, usage)
+                        )
+                    }.getOrNull()
+                    if (usageRes?.isSuccessful == true) {
+                        com.sterni.tether.admin.AppUsageTracker.commit(context)
+                        Log.i(TAG, "Reported ${usage.size} usage sessions")
+                    } else {
+                        Log.w(TAG, "Usage upload failed (will retry next sync)")
+                    }
+                }
+
                 // Heartbeat
                 api.sendHeartbeat(deviceId, com.sterni.tether.data.api.HeartbeatRequest(
                     accessibilityEnabled = isA11y,

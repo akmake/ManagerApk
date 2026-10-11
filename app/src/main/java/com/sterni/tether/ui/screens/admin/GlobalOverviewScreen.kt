@@ -1,5 +1,12 @@
 package com.sterni.tether.ui.screens.admin
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as ElevatedCard
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -152,10 +159,10 @@ fun GlobalOverviewScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("סקירה גלובלית", fontWeight = FontWeight.Bold)
+                        Text("סקירה גלובלית", fontWeight = FontWeight.SemiBold)
                         Text(
                             "${devices.size} מכשירים · ${communities.size} קהילות",
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -339,7 +346,7 @@ private fun DeviceCard(
                             maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
                         if (device.deviceNickname != null) {
-                            Text(device.deviceModel, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(device.deviceModel, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -359,7 +366,7 @@ private fun DeviceCard(
                 Text(device.communityName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (device.communityCode.isNotEmpty()) {
                     Text("·", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(device.communityCode, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Text(device.communityCode, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                 }
             }
@@ -370,7 +377,7 @@ private fun DeviceCard(
                 Text(
                     try { sdf.format(SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(device.lastSeen.take(19))!!) }
                     catch (_: Exception) { device.lastSeen.take(16) },
-                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.weight(1f))
                 // Status chips
@@ -494,7 +501,7 @@ private fun CommunityCard(
                         Text(community.name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         Text(
                             community.code,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.primary,
                             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                         )
@@ -532,7 +539,7 @@ private fun CommunityCard(
                 Text(
                     try { sdf.format(SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(community.createdAt.take(19))!!) }
                     catch (_: Exception) { community.createdAt.take(10) },
-                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -552,7 +559,7 @@ private fun StatusChipSmall(label: String, active: Boolean) {
     ) {
         Text(
             label,
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             color = if (active) MaterialTheme.colorScheme.secondary
                     else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)

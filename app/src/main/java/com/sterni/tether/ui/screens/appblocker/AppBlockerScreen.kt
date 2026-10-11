@@ -1,5 +1,13 @@
 package com.sterni.tether.ui.screens.appblocker
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherSwitch as Switch
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.provider.Settings
@@ -57,7 +65,7 @@ fun AppBlockerScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("חוסם אפליקציות", fontFamily = BaHaYetzira, fontWeight = FontWeight.Bold)
+                    Text("חוסם אפליקציות", fontFamily = BaHaYetzira, fontWeight = FontWeight.SemiBold)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -109,7 +117,7 @@ fun AppBlockerScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     "נדרשת הרשאת נגישות",
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.SemiBold,
                                     fontSize   = 14.sp,
                                     fontFamily = SblHebrew,
                                     color      = Color(0xFF7C4D00)
@@ -229,7 +237,7 @@ private fun ScheduleCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = Primary.copy(alpha = 0.1f),
                 modifier = Modifier.size(52.dp)
             ) {
@@ -250,7 +258,7 @@ private fun ScheduleCard(
                 Text(
                     text       = schedule.formattedRange(),
                     fontSize   = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     fontFamily = SblHebrew,
                     color      = Ink
                 )
@@ -343,7 +351,7 @@ private fun ScheduleEditor(
         Text(
             text       = if (schedule.label.isEmpty()) "לוח זמנים חדש" else "עריכת לוח זמנים",
             fontSize   = 18.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             fontFamily = BaHaYetzira,
             modifier   = Modifier.padding(bottom = 20.dp)
         )
@@ -354,7 +362,7 @@ private fun ScheduleEditor(
             onValueChange = { onChange(schedule.copy(label = it)) },
             label         = { Text("שם (אופציונלי)", fontFamily = SblHebrew) },
             modifier      = Modifier.fillMaxWidth(),
-            shape         = RoundedCornerShape(12.dp),
+            shape         = RoundedCornerShape(18.dp),
             singleLine    = true
         )
 
@@ -397,7 +405,7 @@ private fun ScheduleEditor(
             onValueChange = { appSearch = it },
             label         = { Text("חיפוש אפליקציה", fontFamily = SblHebrew) },
             modifier      = Modifier.fillMaxWidth(),
-            shape         = RoundedCornerShape(12.dp),
+            shape         = RoundedCornerShape(18.dp),
             singleLine    = true,
             leadingIcon   = { Icon(Icons.Default.Search, null) }
         )
@@ -442,15 +450,15 @@ private fun ScheduleEditor(
             OutlinedButton(
                 onClick  = onDismiss,
                 modifier = Modifier.weight(1f),
-                shape    = RoundedCornerShape(12.dp)
+                shape    = RoundedCornerShape(18.dp)
             ) { Text("ביטול", fontFamily = SblHebrew) }
 
             Button(
                 onClick  = onSave,
                 modifier = Modifier.weight(1f),
-                shape    = RoundedCornerShape(12.dp),
+                shape    = RoundedCornerShape(18.dp),
                 colors   = ButtonDefaults.buttonColors(containerColor = Primary)
-            ) { Text("שמירה", fontFamily = SblHebrew, fontWeight = FontWeight.Bold) }
+            ) { Text("שמירה", fontFamily = SblHebrew, fontWeight = FontWeight.SemiBold) }
         }
     }
 
@@ -488,7 +496,7 @@ private fun AppItem(
     Row(
         modifier          = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(18.dp))
             .background(if (checked) Primary.copy(alpha = 0.06f) else Color.Transparent)
             .clickable { onToggle(!checked) }
             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -520,13 +528,13 @@ private fun AppIcon(drawable: Drawable?, size: Int) {
         Image(
             bitmap             = bitmap,
             contentDescription = null,
-            modifier           = Modifier.size(size.dp).clip(RoundedCornerShape(8.dp))
+            modifier           = Modifier.size(size.dp).clip(RoundedCornerShape(18.dp))
         )
     } else {
         Box(
             modifier = Modifier
                 .size(size.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(18.dp))
                 .background(Muted.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
@@ -542,11 +550,11 @@ private fun TimeButton(label: String, time: String, onClick: () -> Unit, modifie
     OutlinedButton(
         onClick  = onClick,
         modifier = modifier.height(56.dp),
-        shape    = RoundedCornerShape(12.dp)
+        shape    = RoundedCornerShape(18.dp)
     ) {
         Text(label, fontFamily = SblHebrew, fontSize = 12.sp, color = Muted)
         Spacer(Modifier.width(4.dp))
-        Text(time, fontFamily = SblHebrew, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Ink)
+        Text(time, fontFamily = SblHebrew, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Ink)
     }
 }
 

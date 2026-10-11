@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.study
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -201,7 +205,7 @@ fun StudyDetailScreen(
 
     Scaffold(
         topBar = {
-            Surface(shadowElevation = 0.dp, color = Color(0xFFFDFBF7)) {
+            Surface(shadowElevation = 0.dp, color = Color(0xFFFFFFFF)) {
                 Column {
                     Spacer(Modifier.statusBarsPadding())
                     Row(
@@ -219,7 +223,7 @@ fun StudyDetailScreen(
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Center,
                             fontSize = 19.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = Primary,
                             maxLines = 1,
                             fontFamily = SblHebrew
@@ -231,7 +235,7 @@ fun StudyDetailScreen(
                 }
             }
         },
-        containerColor = Color(0xFFFDFBF7),
+        containerColor = Color(0xFFFFFFFF),
         floatingActionButton = {
             Button(
                 onClick = { autoScrolling = !autoScrolling },
@@ -391,7 +395,7 @@ private fun HeaderRow(section: Section, fontSize: Int) {
                 modifier = Modifier.padding(horizontal = 16.dp),
                 textAlign = TextAlign.Center,
                 fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontFamily = SblHebrew,
                 color = Primary,
                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)
@@ -404,7 +408,7 @@ private fun HeaderRow(section: Section, fontSize: Int) {
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp),
             textAlign = TextAlign.Center,
             fontSize = 30.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             fontFamily = SblHebrew,
             color = Primary,
             style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)
@@ -416,7 +420,7 @@ private fun HeaderRow(section: Section, fontSize: Int) {
 private fun HalachaRow(section: Section, fontSize: Int) {
     val ordinal = (section.ordinal ?: "") + "\u00A0"
     val annotated = buildAnnotatedString {
-        withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.Bold, fontSize = (fontSize + 6).sp)) {
+        withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.SemiBold, fontSize = (fontSize + 6).sp)) {
             append(ordinal)
         }
         append(section.he ?: "")
@@ -451,13 +455,13 @@ private fun VerseRow(
         if (isShnayim && connected) {
             val annotated = buildAnnotatedString {
                 if (showPrefix) {
-                    withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.Bold, fontSize = (fontSize - 1).sp)) {
+                    withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.SemiBold, fontSize = (fontSize - 1).sp)) {
                         append(toHebNum(section.verseNum!!)); append("\u00A0")
                     }
                 }
                 append("$he ")
                 if (showPrefix) {
-                    withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.Bold, fontSize = (fontSize - 1).sp)) {
+                    withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.SemiBold, fontSize = (fontSize - 1).sp)) {
                         append(toHebNum(section.verseNum!!)); append("\u00A0")
                     }
                 }
@@ -477,7 +481,7 @@ private fun VerseRow(
         } else {
             val annotated = buildAnnotatedString {
                 if (showPrefix) {
-                    withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.Bold, fontSize = (fontSize - 1).sp)) {
+                    withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.SemiBold, fontSize = (fontSize - 1).sp)) {
                         append(toHebNum(section.verseNum!!))
                     }
                     append(" ")
@@ -524,7 +528,7 @@ private fun RashiBlock(rashiList: List<Section.RashiItem>, fontSize: Int) {
     ) {
         Box(modifier = Modifier.width(3.dp).fillMaxHeight().background(Amber.copy(alpha = 0.55f)))
         Column(modifier = Modifier.padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 6.dp)) {
-            Text("רש\u05F4י", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Amber, modifier = Modifier.padding(bottom = 6.dp))
+            Text("רש\u05F4י", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Amber, modifier = Modifier.padding(bottom = 6.dp))
             rashiList.forEach { item ->
                 if (!item.he.isNullOrEmpty()) {
                     Text(
@@ -556,11 +560,11 @@ fun CustomTehillimChaptersDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFFFDFBF7),
+        containerColor = Color(0xFFFFFFFF),
         title = {
             Text(
                 "Personal Tehillim Chapters",
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp,
                 color = Primary,
                 textAlign = TextAlign.Center,
@@ -620,7 +624,7 @@ fun CustomTehillimChaptersDialog(
                     ) { Text("Add") }
                 }
                 if (inputError) {
-                    Text("Invalid chapter (1–150)", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                    Text("Invalid chapter (1–150)", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                 }
             }
         },
@@ -649,9 +653,9 @@ fun ReadingSettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFFFDFBF7),
+        containerColor = Color(0xFFFFFFFF),
         title = {
-            Text("Reading Settings", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Text("Reading Settings", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -685,9 +689,9 @@ fun ChumashSettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFFFDFBF7),
+        containerColor = Color(0xFFFFFFFF),
         title = {
-            Text("הגדרות חומש", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Text("הגדרות חומש", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -735,9 +739,9 @@ fun TehillimSettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFFFDFBF7),
+        containerColor = Color(0xFFFFFFFF),
         title = {
-            Text("הגדרות תהילים", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Text("הגדרות תהילים", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {

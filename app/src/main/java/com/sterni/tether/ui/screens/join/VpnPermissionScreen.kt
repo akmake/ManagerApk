@@ -1,5 +1,7 @@
 package com.sterni.tether.ui.screens.join
 
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import android.app.Activity
 import android.content.Intent
 import android.net.VpnService
@@ -7,6 +9,8 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,7 +46,7 @@ fun VpnPermissionScreen(onGranted: () -> Unit) {
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxSize().systemBarsPadding().imePadding().verticalScroll(rememberScrollState())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -54,7 +58,7 @@ fun VpnPermissionScreen(onGranted: () -> Unit) {
         Text(
             text = "הגנת אינטרנט",
             fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.SemiBold
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -94,7 +98,7 @@ fun VpnPermissionScreen(onGranted: () -> Unit) {
                 .fillMaxWidth()
                 .height(52.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1A237E)
+                containerColor = Color(0xFF345DDD)
             )
         ) {
             Text("הפעל הגנה", fontSize = 16.sp)

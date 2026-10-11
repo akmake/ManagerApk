@@ -1,5 +1,11 @@
 package com.sterni.tether.ui.screens.admin
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+
 import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -158,7 +164,7 @@ private fun CommunityCard(community: AdminCommunity, onClick: () -> Unit, onDele
                             color = MaterialTheme.colorScheme.errorContainer
                         ) {
                             Text("מושבת", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                                fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }

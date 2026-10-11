@@ -19,6 +19,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 
 class TetherAccessibilityService : AccessibilityService() {
@@ -31,6 +34,8 @@ class TetherAccessibilityService : AccessibilityService() {
     private var lastWhatsAppScanTs = 0L
     private var lastWhatsAppActionTs = 0L
     private var lastWhatsAppDebugTs = 0L
+    private val whatsAppAccessGuard = WhatsAppAccessGuard()
+    private var whatsAppExitJob: Job? = null
 
     // YouTube Shorts daily-limit tracker.
     // shortsWatchingSince = wall-clock ms when the current Shorts session started (0 = not watching).
@@ -45,6 +50,7 @@ class TetherAccessibilityService : AccessibilityService() {
     // it is dying, and without these every tick would queue another Home bounce.
     private var lastPackActionTs = 0L
     private var lastUrlScanTs = 0L
+    private var lastForegroundPkg: String? = null   // dedupes the foreground-app trace
 
     // All accessibility blocks funnel through the shared SecurityLogger (device-id + throttle + POST).
     private fun logEvent(type: String, packageName: String? = null) {
@@ -195,6 +201,24 @@ class TetherAccessibilityService : AccessibilityService() {
         if (TetherPolicyManager.isUninstallWindowActive(this)) return
 
         val pkg = event.packageName?.toString() ?: return
+
+        // Local self-restrictions apply to managers too, independently of community exemptions.
+        if (pkg in WHATSAPP_PACKAGES && TetherPolicyManager.isWhatsAppBlockedLocally(this)) {
+            if (canActOnWhatsApp()) {
+                Toast.makeText(this, "וואטסאפ חסום בכלים העצמיים", Toast.LENGTH_SHORT).show()
+                performGlobalAction(GLOBAL_ACTION_HOME)
+            }
+            return
+        }
+
+        // Foreground-app trace: one line per app switch (deduplicated, so it stays quiet). This is
+        // the fastest way to learn the real package name of an OEM browser that slipped through —
+        // open it on the device, then read the last line in the diagnostics console.
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && pkg != lastForegroundPkg) {
+            lastForegroundPkg = pkg
+            Log.i(TAG, "Foreground app: $pkg")
+        }
+
         val policy = TetherPolicyManager.loadPolicy(this)
         val blockedBehavior = policy?.blockedActionBehavior ?: BlockedActionBehavior.SILENT
         val hasTempApproval = TetherPolicyManager.isAppTemporarilyAllowed(this, pkg)
@@ -205,6 +229,22 @@ class TetherAccessibilityService : AccessibilityService() {
         // the manager turned on themselves, keep working. Admin login requires server auth, so a
         // managed user can't reach this state.
         val managerExempt = AdminSession.isLoggedIn(this)
+
+        if (pkg in WHATSAPP_PACKAGES && whatsAppAccessGuard.isPending(pkg)) {
+            if (!isWhatsAppShieldActive()) {
+                whatsAppAccessGuard.clear(pkg)
+            } else {
+                val root = rootInActiveWindow
+                val reachedChats = try {
+                    root?.packageName?.toString() == pkg && isWhatsAppChatsList(root, 0)
+                } finally { root?.recycle() }
+                if (reachedChats) whatsAppAccessGuard.reachedChats(pkg)
+                else {
+                    enforceWhatsAppExit(pkg)
+                    return
+                }
+            }
+        }
 
         // === Layer 1: APK installers — ALWAYS blocked, independent of app mode ===
         if (BlockPack.isInstaller(pkg) && !hasTempApproval && !managerExempt) {
@@ -373,12 +413,12 @@ class TetherAccessibilityService : AccessibilityService() {
             try {
                 val marker = whatsAppStatusOrChannelMarker(event, root)
                 if (marker != null) {
-                    if (canActOnWhatsApp()) {
+                    if (whatsAppAccessGuard.block(pkg)) {
                         Log.w(TAG, "Blocking WhatsApp Status/Channels access (marker=$marker)")
                         logEvent("BLOCKED_APP_OPENED", "com.whatsapp.channels")
                         Toast.makeText(this, WHATSAPP_BLOCK_MESSAGE, Toast.LENGTH_LONG).show()
-                        performGlobalAction(GLOBAL_ACTION_HOME)
                     }
+                    enforceWhatsAppExit(pkg)
                 } else {
                     debugDumpWhatsAppIds(root)
                 }
@@ -461,22 +501,106 @@ class TetherAccessibilityService : AccessibilityService() {
 
     /**
      * Returns a short marker string if the active WhatsApp window is the Status viewer or a
-     * Channel ("newsletter") screen, else null. LANGUAGE-INDEPENDENT: it inspects WhatsApp's
-     * internal resource-ids / class names (always English) rather than localized text, so it
-     * behaves the same in Hebrew, English, Arabic, etc.
+     * Channel ("newsletter") screen, else null. Resource/class detection is language-independent;
+     * a Hebrew/English follow-button and follower-count fallback covers generic chat layouts.
      */
     private fun whatsAppStatusOrChannelMarker(event: AccessibilityEvent, root: AccessibilityNodeInfo): String? {
         event.className?.toString()?.lowercase()?.let { cls ->
             WHATSAPP_STATUS_CHANNEL_TOKENS.firstOrNull { cls.contains(it) }?.let { return "class:$it" }
         }
-        return findStatusChannelMarker(root, 0)
+        findStatusChannelMarker(root, 0)?.let { return it }
+        val labels = mutableListOf<String>()
+        val actions = mutableListOf<String>()
+        collectWhatsAppLabels(root, 0, false, labels, actions)
+        return if (WhatsAppScreenRules.isChannelSurface(labels, actions)) "channel:follow-and-followers" else null
+    }
+
+    private fun isWhatsAppShieldActive(): Boolean =
+        TetherPolicyManager.isWhatsAppShieldEnabled(this) ||
+            (!AdminSession.isLoggedIn(this) && TetherPolicyManager.loadPolicy(this)?.blockWhatsAppChannels == true)
+
+    private fun isWhatsAppChatsList(node: AccessibilityNodeInfo?, depth: Int): Boolean {
+        if (node == null || depth > 25) return false
+        val id = node.viewIdResourceName?.substringAfter("id/")?.lowercase().orEmpty()
+        if (node.isVisibleToUser && (
+                id.startsWith("conversations_row_") ||
+                (node.isSelected && id in setOf("chats_tab", "conversations_tab", "navigation_chats"))
+            )) return true
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = try { isWhatsAppChatsList(child, depth + 1) } finally { child.recycle() }
+            if (found) return true
+        }
+        return false
+    }
+
+    private fun enforceWhatsAppExit(packageName: String) {
+        if (whatsAppExitJob?.isActive == true) return
+        // Back unwinds the search itself before the channel. The latch is not cleared just because
+        // search hides the channel identifiers, Home is pressed, or no more UI events arrive.
+        whatsAppExitJob = serviceScope.launch(Dispatchers.Main.immediate) {
+            var attempts = 0
+            while (whatsAppAccessGuard.isPending(packageName)) {
+                if (!isWhatsAppShieldActive()) {
+                    whatsAppAccessGuard.clear(packageName)
+                    break
+                }
+                val root = rootInActiveWindow
+                val foreground = root?.packageName?.toString()
+                val chats = try { isWhatsAppChatsList(root, 0) } finally { root?.recycle() }
+                if (foreground == null) {
+                    delay(200)
+                    continue
+                }
+                if (foreground != packageName) {
+                    val keyboardPackage = android.provider.Settings.Secure.getString(contentResolver,
+                        android.provider.Settings.Secure.DEFAULT_INPUT_METHOD)?.substringBefore('/')
+                    val whatsappBehindKeyboard = foreground == keyboardPackage && windows.any { window ->
+                        val windowRoot = window.root
+                        try { windowRoot?.packageName?.toString() == packageName }
+                        finally { windowRoot?.recycle() }
+                    }
+                    if (whatsappBehindKeyboard) {
+                        performGlobalAction(GLOBAL_ACTION_BACK)
+                        delay(200)
+                        continue
+                    }
+                    break
+                }
+                if (chats) {
+                    whatsAppAccessGuard.reachedChats(packageName)
+                    break
+                }
+                performGlobalAction(if (attempts++ < 8) GLOBAL_ACTION_BACK else GLOBAL_ACTION_HOME)
+                delay(200)
+            }
+        }
+    }
+
+    private fun collectWhatsAppLabels(
+        node: AccessibilityNodeInfo?, depth: Int, clickableParent: Boolean,
+        labels: MutableList<String>, actions: MutableList<String>
+    ) {
+        if (node == null || depth > 25 || labels.size >= 250) return
+        val actionable = node.isClickable || clickableParent
+        if (node.isVisibleToUser) {
+            listOfNotNull(node.text?.toString(), node.contentDescription?.toString()).forEach {
+                labels.add(it)
+                if (actionable) actions.add(it)
+            }
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try { collectWhatsAppLabels(child, depth + 1, actionable, labels, actions) }
+            finally { child.recycle() }
+        }
     }
 
     private fun findStatusChannelMarker(node: AccessibilityNodeInfo?, depth: Int): String? {
         if (node == null || depth > 25) return null
         if (node.isVisibleToUser) {
             node.viewIdResourceName?.lowercase()?.let { id ->
-                WHATSAPP_STATUS_CHANNEL_TOKENS.firstOrNull { id.contains(it) }?.let { return "id:$it" }
+                WhatsAppScreenRules.resourceMarker(id, node.isSelected)?.let { return "id:$it" }
             }
         }
         for (i in 0 until node.childCount) {
@@ -673,7 +797,7 @@ class TetherAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         isRunning = false
+        serviceScope.cancel()
         super.onDestroy()
     }
 }
-

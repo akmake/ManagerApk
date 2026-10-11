@@ -61,6 +61,13 @@ interface TetherApiService {
     @GET("tether/communities/{code}/verify")
     suspend fun verifyCommunityCode(@Path("code") code: String): Response<Map<String, Any>>
 
+    // Foreground app-usage sessions — what ran on this device, when, for how long.
+    @POST("tether/devices/{deviceId}/usage")
+    suspend fun reportUsage(
+        @Path("deviceId") deviceId: String,
+        @Body body: com.sterni.tether.data.model.ReportUsageRequest
+    ): retrofit2.Response<Unit>
+
     @POST("tether/devices/{deviceId}/apps")
     suspend fun reportApps(@Path("deviceId") deviceId: String, @Body request: ReportAppsRequest): Response<Any>
 

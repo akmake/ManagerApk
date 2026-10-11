@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.pdflibrary
 
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.net.Uri
@@ -245,7 +249,7 @@ fun PdfStudyScreen(
                         text       = currentBook.title,
                         color      = Color.White,
                         fontSize   = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines   = 1,
                         modifier   = Modifier.weight(1f).padding(horizontal = 16.dp)
                     )
@@ -312,7 +316,7 @@ fun PdfStudyScreen(
         onDispose { }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFFDFBF7))) {
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFFFFFFF))) {
         Surface(shadowElevation = 2.dp, color = Color.White) {
             Column {
                 Spacer(Modifier.statusBarsPadding())
@@ -327,7 +331,7 @@ fun PdfStudyScreen(
                         text       = "ארון הספרים שלי",
                         modifier   = Modifier.weight(1f),
                         fontSize   = 20.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontFamily = BaHaYetzira,
                         color      = Primary
                     )
@@ -354,7 +358,7 @@ fun PdfStudyScreen(
                     Text(
                         "הספרייה שלך ריקה",
                         fontSize   = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontFamily = BaHaYetzira,
                         color      = Primary
                     )
@@ -368,7 +372,7 @@ fun PdfStudyScreen(
                     Button(
                         onClick = { launcher.launch(arrayOf("application/pdf")) },
                         colors  = ButtonDefaults.buttonColors(containerColor = Primary),
-                        shape   = RoundedCornerShape(12.dp)
+                        shape   = RoundedCornerShape(18.dp)
                     ) {
                         Text("הוסף קובץ PDF", fontSize = 16.sp)
                     }
@@ -383,9 +387,9 @@ fun PdfStudyScreen(
                     Card(
                         modifier  = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(18.dp))
                             .clickable { vm.openBook(book.id) },
-                        shape     = RoundedCornerShape(12.dp),
+                        shape     = RoundedCornerShape(18.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         colors    = CardDefaults.cardColors(containerColor = Color.White)
                     ) {
@@ -404,7 +408,7 @@ fun PdfStudyScreen(
                                 Text(
                                     text       = book.title,
                                     fontSize   = 18.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.SemiBold,
                                     fontFamily = BaHaYetzira,
                                     color      = Primary,
                                     maxLines   = 1,

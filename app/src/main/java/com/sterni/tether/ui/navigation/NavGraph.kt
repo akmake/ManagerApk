@@ -246,7 +246,8 @@ fun NavGraph(
                 onBack = { navController.popBackStack() },
                 onEmergencyClick = { navController.navigate(Screen.Emergency.route) },
                 onSelfToolsClick = { navController.navigate(Screen.SelfTools.route) },
-                onDiagnosticsClick = { navController.navigate(Screen.Diagnostics.route) }
+                onDiagnosticsClick = { navController.navigate(Screen.Diagnostics.route) },
+                onAdminClick = onEnterAdmin
             )
         }
 

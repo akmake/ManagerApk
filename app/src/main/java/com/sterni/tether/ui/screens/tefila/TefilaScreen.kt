@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.tefila
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -25,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sterni.tether.ui.theme.*
 
-private val LightBg = Color(0xFFFDFBF7)
+private val LightBg = Color(0xFFFFFFFF)
 
 private enum class TefilaSection { EIZEHU, KSHEMA }
 
@@ -135,7 +139,7 @@ fun TefilaScreen(onBack: () -> Unit) {
                             modifier   = Modifier.weight(1f),
                             textAlign  = TextAlign.Center,
                             fontSize   = 19.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color      = Primary,
                             fontFamily = BaHaYetzira
                         )
@@ -214,7 +218,7 @@ private fun SectionCard(title: String, subtitle: String, color: Color, onClick: 
                 Text(
                     title,
                     fontSize   = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     fontFamily = BaHaYetzira,
                     color      = Ink,
                     textAlign  = TextAlign.End,
@@ -256,7 +260,7 @@ private fun EizehoParagraph(text: String, fontSize: Int) {
     val rest       = if (firstSpace >= 0) text.substring(firstSpace) else ""
 
     val annotated = buildAnnotatedString {
-        withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.Bold, fontSize = (fontSize + 2).sp)) {
+        withStyle(SpanStyle(color = Primary, fontWeight = FontWeight.SemiBold, fontSize = (fontSize + 2).sp)) {
             append(firstWord)
         }
         append(rest)
@@ -299,7 +303,7 @@ private fun ShemaIsraelLine(text: String, fontSize: Int) {
         text       = text,
         modifier   = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         fontSize   = (fontSize + 12).sp,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
         fontFamily = SblHebrew,
         color      = Primary,
         textAlign  = TextAlign.Center,
@@ -348,7 +352,7 @@ private fun FontSizeDialog(fontSize: Int, onDismiss: () -> Unit, onSave: (Int) -
         title = {
             Text(
                 "גודל גופן",
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize   = 18.sp,
                 color      = Primary,
                 modifier   = Modifier.fillMaxWidth(),

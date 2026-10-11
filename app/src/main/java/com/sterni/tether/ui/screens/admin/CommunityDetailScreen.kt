@@ -1,5 +1,13 @@
 package com.sterni.tether.ui.screens.admin
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as ElevatedCard
+import com.sterni.tether.ui.components.TetherSwitch as Switch
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.app.Application
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
@@ -531,7 +539,7 @@ private fun DeviceCard(
                         )
                         Text(
                             if (device.isOnline) "מחובר" else "לא פעיל",
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = if (device.isOnline)
                                 MaterialTheme.colorScheme.secondary
                             else
@@ -571,8 +579,8 @@ private fun DeviceCard(
                     ) {
                         Text(
                             "DO",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
                         )
@@ -658,7 +666,7 @@ private fun ProtectionChip(label: String, active: Boolean, modifier: Modifier = 
             )
             Text(
                 label,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 color = if (active) MaterialTheme.colorScheme.secondary
                 else MaterialTheme.colorScheme.error
             )
@@ -671,7 +679,7 @@ private fun ProtectionChip(label: String, active: Boolean, modifier: Modifier = 
 // ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 
 @Composable
-private fun PolicyTab(
+internal fun PolicyTab(
     policy: CommunityPolicy?,
     saving: Boolean,
     onSave: (CommunityPolicy) -> Unit
@@ -700,7 +708,7 @@ private fun PolicyTab(
             item {
                 PolicySectionCard(title = "חסימות", icon = Icons.Default.Block) {
                     PolicyRow(
-                        label = "🛡 חבילת חסימה",
+                        label = "חבילת חסימה",
                         desc = "כפתור אחד: כל הדפדפנים + יוטיוב בכל צורה + התקנות חיצוניות + כל החנויות",
                         value = edited.blockPack
                     ) { edited = edited.copy(blockPack = it) }
@@ -809,7 +817,7 @@ private fun PolicyTab(
                                 )
                                 if (mode == AppPolicyMode.WHITELIST) {
                                     Text("מצב קיוסק — כל שאר האפליקציות חסומות",
-                                        fontSize = 11.sp,
+                                        fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
@@ -841,7 +849,7 @@ private fun PolicyTab(
                                 )
                                 if (mode == WebFilterMode.WHITELIST) {
                                     Text("כל שאר האינטרנט חסום",
-                                        fontSize = 11.sp,
+                                        fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
@@ -895,7 +903,7 @@ private fun PolicyTab(
                                             ApprovalResolverMode.SUPERADMIN_ONLY -> "Superadmin"
                                             ApprovalResolverMode.OWNER_OR_SUPERADMIN -> "Both"
                                         },
-                                        fontSize = 11.sp
+                                        fontSize = 12.sp
                                     )
                                 }
                             )
@@ -1041,10 +1049,14 @@ private fun AppControlModeCard(
             containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
         )
     ) {
-        Column(Modifier.padding(12.dp)) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = selected, onClick = onClick)
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             Spacer(Modifier.height(2.dp))
             Text(description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
@@ -1062,7 +1074,7 @@ private fun PolicySectionCard(
                 modifier = Modifier.padding(bottom = 12.dp)
             ) {
                 Icon(icon, null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
@@ -1093,6 +1105,7 @@ private fun PolicyRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        Spacer(Modifier.width(16.dp))
         Switch(checked = value, onCheckedChange = onChange)
     }
 }
@@ -1115,7 +1128,7 @@ private fun AppListSection(
             Spacer(Modifier.width(6.dp))
             Column {
                 Text(title, fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                Text(desc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(desc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -1298,7 +1311,7 @@ private fun AppTimeLocksSection(locks: List<AppTimeLock>, onChange: (List<AppTim
             fontWeight = FontWeight.Medium, fontSize = 13.sp,
             color = MaterialTheme.colorScheme.secondary)
         Text("null = נעילה לצמיתות",
-            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
@@ -1331,7 +1344,7 @@ private fun AppTimeLocksSection(locks: List<AppTimeLock>, onChange: (List<AppTim
                     Text(
                         if (lock.lockedUntilTs == null) "חסום לצמיתות"
                         else "חסום עד: ${sdf.format(Date(lock.lockedUntilTs))}",
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -1406,7 +1419,7 @@ private fun ShareTab(community: AdminCommunity?, onShare: (String, String) -> Un
                 Text(
                     "${community.code.take(4)} - ${community.code.drop(4)}",
                     fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
                     letterSpacing = 4.sp
                 )

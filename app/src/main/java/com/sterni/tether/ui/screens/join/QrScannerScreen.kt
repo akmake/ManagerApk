@@ -1,5 +1,7 @@
 package com.sterni.tether.ui.screens.join
 
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis

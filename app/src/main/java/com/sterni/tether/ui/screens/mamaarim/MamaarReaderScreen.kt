@@ -1,5 +1,8 @@
 package com.sterni.tether.ui.screens.mamaarim
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -110,7 +113,7 @@ private fun ReaderContent(mamaar: Mamaar, onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            Surface(shadowElevation = 0.dp, color = Color(0xFFFDFBF7)) {
+            Surface(shadowElevation = 0.dp, color = Color(0xFFFFFFFF)) {
                 Column {
                     Spacer(Modifier.statusBarsPadding())
                     Row(
@@ -128,7 +131,7 @@ private fun ReaderContent(mamaar: Mamaar, onBack: () -> Unit) {
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Center,
                             fontSize = 19.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = Primary,
                             maxLines = 1
                         )
@@ -139,7 +142,7 @@ private fun ReaderContent(mamaar: Mamaar, onBack: () -> Unit) {
                 }
             }
         },
-        containerColor = Color(0xFFFDFBF7),
+        containerColor = Color(0xFFFFFFFF),
         floatingActionButton = {
             Button(
                 onClick = { autoScrolling = !autoScrolling },

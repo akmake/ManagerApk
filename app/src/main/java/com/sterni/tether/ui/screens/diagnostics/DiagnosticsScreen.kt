@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.diagnostics
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -88,7 +92,7 @@ fun DiagnosticsScreen(onBack: () -> Unit) {
 
             Text(
                 "${filtered.size} רשומות • מתעדכן בזמן אמת",
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
@@ -122,7 +126,7 @@ private fun LogLine(e: DevLog.Entry) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
         Text(
             "${e.time}  ${e.level}/${e.tag}",
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

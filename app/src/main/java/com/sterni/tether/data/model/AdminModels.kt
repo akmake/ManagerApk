@@ -29,7 +29,8 @@ data class AdminCommunity(
     val policy: CommunityPolicy,
     val deviceCount: Int,
     val active: Boolean,
-    val createdAt: String
+    val createdAt: String,
+    val adminId: String? = null
 )
 
 // Create community
@@ -175,7 +176,7 @@ data class AdminMember(
     val role: String = "admin",
     val active: Boolean = true
 )
-data class InviteAdminRequest(val name: String, val email: String, val password: String)
+data class InviteAdminRequest(val name: String, val email: String, val password: String, val communityId: String? = null)
 
 data class AdminApprovedApp(
     @SerializedName("_id", alternate = ["id"]) val id: String,

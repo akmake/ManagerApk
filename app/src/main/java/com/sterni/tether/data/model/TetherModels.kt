@@ -89,6 +89,20 @@ data class InstalledAppInfo(
     val isSystemApp: Boolean
 )
 
+/** One foreground session: which app, from when to when. Collected by [AppUsageTracker]. */
+data class AppUsageSession(
+    val packageName: String,
+    val appName: String? = null,
+    val startTs: Long,
+    val endTs: Long,
+    val durationMs: Long
+)
+
+data class ReportUsageRequest(
+    val deviceId: String,
+    val sessions: List<AppUsageSession>
+)
+
 data class ReportAppsRequest(
     val deviceId: String,
     val installedApps: List<InstalledAppInfo>

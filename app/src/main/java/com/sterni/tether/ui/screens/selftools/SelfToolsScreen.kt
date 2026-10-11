@@ -1,5 +1,13 @@
 package com.sterni.tether.ui.screens.selftools
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherSwitch as Switch
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -7,6 +15,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +28,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sterni.tether.data.local.ShortsLimitPrefs
+import com.sterni.tether.admin.TetherPolicyManager
+import com.sterni.tether.admin.TetherAccessibilityService
+import com.sterni.tether.ui.components.*
 import com.sterni.tether.ui.theme.BaHaYetzira
 import com.sterni.tether.ui.theme.Ink
 import com.sterni.tether.ui.theme.LineColor
@@ -34,6 +47,8 @@ import com.sterni.tether.ui.theme.SblHebrew
 @Composable
 fun SelfToolsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    var whatsappBlocked by remember { mutableStateOf(TetherPolicyManager.isWhatsAppBlockedLocally(context)) }
+    var whatsappShield by remember { mutableStateOf(TetherPolicyManager.isWhatsAppShieldEnabled(context)) }
 
     var shortsEnabled by remember { mutableStateOf(ShortsLimitPrefs.isEnabled(context)) }
     var shortsMinutes by remember { mutableStateOf(ShortsLimitPrefs.dailyLimitMinutes(context)) }
@@ -55,7 +70,7 @@ fun SelfToolsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("כלים עצמיים", fontFamily = BaHaYetzira, fontWeight = FontWeight.Bold) },
+                title = { Text("כלים עצמיים", fontFamily = BaHaYetzira, fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowForward, contentDescription = "חזרה")
@@ -80,9 +95,42 @@ fun SelfToolsScreen(onBack: () -> Unit) {
                 )
             }
 
+            item { SectionTitle("וואטסאפ") }
+            item {
+                TetherSettingsGroup {
+                ToggleRow(
+                    icon = Icons.Default.Block,
+                    label = "חסום את וואטסאפ",
+                    description = "חוסם במכשיר הזה את WhatsApp ואת WhatsApp Business, כולל שיחות וצ׳אטים.",
+                    checked = whatsappBlocked,
+                    onCheckedChange = {
+                        whatsappBlocked = it
+                        TetherPolicyManager.setWhatsAppBlockedLocally(context, it)
+                    }
+                )
+                TetherGroupDivider()
+                ToggleRow(
+                    icon = Icons.Default.VisibilityOff,
+                    label = "חסום סטטוסים וערוצים",
+                    description = "חוסם גישה לסטטוסים ולערוצים; צ׳אטים ושיחות רגילים נשארים זמינים.",
+                    checked = whatsappShield,
+                    onCheckedChange = {
+                        whatsappShield = it
+                        TetherPolicyManager.setWhatsAppShieldEnabled(context, it)
+                    }
+                )
+                }
+                if (!TetherAccessibilityService.isRunning) {
+                    Text("כדי שהחסימות יפעלו, יש להפעיל את שירות הנגישות במרכז ההרשאות.",
+                        fontFamily = SblHebrew, color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(vertical = 8.dp))
+                }
+            }
+
             item { SectionTitle("יוטיוב שורטס") }
 
             item {
+                TetherSettingsGroup {
                 ToggleRow(
                     icon = Icons.Default.Timer,
                     label = "מגבלת זמן לשורטס",
@@ -93,6 +141,7 @@ fun SelfToolsScreen(onBack: () -> Unit) {
                         ShortsLimitPrefs.setEnabled(context, it)
                     }
                 )
+                }
             }
 
             if (shortsEnabled) {
@@ -156,7 +205,7 @@ private fun UsageCard(usedSeconds: Long, limitMinutes: Int) {
                 "$usedMinutes / $limitMinutes דק׳",
                 fontSize = 28.sp,
                 fontFamily = SblHebrew,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = Ink
             )
             Spacer(Modifier.height(10.dp))
@@ -179,14 +228,7 @@ private fun UsageCard(usedSeconds: Long, limitMinutes: Int) {
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(
-        text,
-        fontSize = 13.sp,
-        fontFamily = SblHebrew,
-        fontWeight = FontWeight.Bold,
-        color = Primary,
-        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-    )
+    TetherSectionTitle(text)
 }
 
 @Composable
@@ -197,29 +239,9 @@ private fun ToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, null, tint = Muted, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, fontSize = 16.sp, fontFamily = SblHebrew, color = Ink)
-            Text(description, fontSize = 12.sp, fontFamily = SblHebrew, color = Muted)
-        }
-        Spacer(Modifier.width(8.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Primary,
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = LineColor
-            )
-        )
-    }
-    HorizontalDivider(color = LineColor.copy(alpha = 0.6f), thickness = 0.5.dp)
+    TetherPreferenceRow(label, icon, subtitle = description, trailing = {
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    })
 }
 
 /** Free numeric entry for the daily limit (any number in range), with quick ±5 buttons. */
@@ -260,7 +282,7 @@ private fun LimitInputRow(
         }
         Text(
             "טווח: ${ShortsLimitPrefs.MIN_LIMIT_MIN}–${ShortsLimitPrefs.MAX_LIMIT_MIN} דקות",
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             fontFamily = SblHebrew,
             color = Muted,
             modifier = Modifier.padding(top = 4.dp)

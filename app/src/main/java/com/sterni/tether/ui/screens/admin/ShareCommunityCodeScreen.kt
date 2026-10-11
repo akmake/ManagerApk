@@ -1,5 +1,11 @@
 package com.sterni.tether.ui.screens.admin
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -64,7 +70,7 @@ fun ShareCommunityCodeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(communityName, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(communityName, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(4.dp))
             Text("שתף את הקוד הבא עם חברי הקהילה", fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -97,7 +103,7 @@ fun ShareCommunityCodeScreen(
                 Text(
                     text = formattedCode,
                     fontSize = 30.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 40.dp, vertical = 16.dp)
                 )

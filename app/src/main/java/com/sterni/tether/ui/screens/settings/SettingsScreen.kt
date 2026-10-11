@@ -1,5 +1,13 @@
 package com.sterni.tether.ui.screens.settings
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherCenteredTopAppBar as CenterAlignedTopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+import com.sterni.tether.ui.components.TetherSwitch as Switch
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherTextField as OutlinedTextField
+
+import com.sterni.tether.ui.components.*
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
@@ -46,7 +54,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onEmergencyClick: () -> Unit,
     onSelfToolsClick: () -> Unit = {},
-    onDiagnosticsClick: () -> Unit = {}
+    onDiagnosticsClick: () -> Unit = {},
+    onAdminClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -72,7 +81,7 @@ fun SettingsScreen(
                 codeError = false
                 isVerifying = false
             },
-            title = { Text("אימות זהות", fontFamily = BaHaYetzira, fontWeight = FontWeight.Bold) },
+            title = { Text("אימות זהות", fontFamily = BaHaYetzira, fontWeight = FontWeight.SemiBold) },
             text = {
                 Column {
                     Text("הזן קוד אישי לפתיחת חלון הסרה זמני:", fontFamily = SblHebrew)
@@ -159,276 +168,84 @@ fun SettingsScreen(
                     Text("אישור", fontFamily = SblHebrew)
                 }
             },
-            title = { Text("עדכון", fontFamily = BaHaYetzira, fontWeight = FontWeight.Bold) },
+            title = { Text("עדכון", fontFamily = BaHaYetzira, fontWeight = FontWeight.SemiBold) },
             text = { Text(message, fontFamily = SblHebrew) }
         )
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("מרכז הגנה", fontFamily = BaHaYetzira, fontWeight = FontWeight.Bold, fontSize = 22.sp) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowForward, "חזרה", tint = Ink)
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
-            contentPadding = PaddingValues(bottom = 32.dp)
-        ) {
-            item { Spacer(Modifier.height(16.dp)) }
-
-            item { SectionTitle("מכשיר זה") }
-
+    Scaffold(topBar = {
+        CenterAlignedTopAppBar(title = { Text("מרכז הגנה") }, navigationIcon = {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowForward, "חזרה") }
+        })
+    }) { padding ->
+        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
+            item { TetherSectionTitle("מכשיר זה") }
             item {
-                InfoRow(
-                    icon = Icons.Default.People,
-                    label = "קהילה",
-                    value = communityName
-                )
+                TetherSettingsGroup {
+                    TetherPreferenceRow("קהילה", Icons.Default.People, trailing = {
+                        Text(communityName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    })
+                    TetherGroupDivider()
+                    TetherPreferenceRow("רמת הגנה", Icons.Default.Shield, trailing = {
+                        Text(if (isDeviceOwner) "מלאה" else "חלקית", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    })
+                }
             }
+            item { TetherSectionTitle("הגנה אישית") }
             item {
-                InfoRow(
-                    icon = Icons.Default.Shield,
-                    label = "רמת הגנה",
-                    value = if (isDeviceOwner) "הגנה מלאה (Tether)" else "הגנה חלקית"
-                )
+                TetherSettingsGroup {
+                    TetherPreferenceRow("חסום סטטוסים וערוצים", Icons.Default.Shield,
+                        subtitle = "בוואטסאפ ובוואטסאפ Business", trailing = {
+                            Switch(whatsappShield, {
+                                whatsappShield = it
+                                TetherPolicyManager.setWhatsAppShieldEnabled(context, it)
+                            })
+                        })
+                    TetherGroupDivider()
+                    TetherPreferenceRow("כלים עצמיים", Icons.Default.Timer,
+                        subtitle = "חסימת וואטסאפ ומגבלת שורטס", onClick = onSelfToolsClick)
+                }
             }
-
-            item { Spacer(Modifier.height(28.dp)) }
-            item { SectionTitle("הגנה אישית") }
-
+            item { TetherSectionTitle("תמיכה וניהול") }
             item {
-                ToggleRow(
-                    icon = Icons.Default.Shield,
-                    label = "מגן סטטוס וערוצים בוואטסאפ",
-                    description = "חוסם כניסה לסטטוסים ולערוצים בוואטסאפ",
-                    checked = whatsappShield,
-                    onCheckedChange = {
-                        whatsappShield = it
-                        TetherPolicyManager.setWhatsAppShieldEnabled(context, it)
-                    }
-                )
+                TetherSettingsGroup {
+                    TetherPreferenceRow("אזור מנהל", Icons.Default.People, onClick = onAdminClick)
+                    TetherGroupDivider()
+                    TetherPreferenceRow("יומן אבחון", Icons.Default.BugReport, onClick = onDiagnosticsClick)
+                    TetherGroupDivider()
+                    TetherPreferenceRow("שחרור בחירום", Icons.Default.Shield, onClick = onEmergencyClick)
+                }
             }
-
+            item { TetherSectionTitle("אודות") }
             item {
-                SettingsButton(
-                    icon = Icons.Default.Timer,
-                    label = "כלים עצמיים (מגבלת שורטס ועוד)",
-                    onClick = onSelfToolsClick
-                )
+                TetherSettingsGroup {
+                    TetherPreferenceRow("גרסה", Icons.Default.Info, trailing = {
+                        Text(BuildConfig.VERSION_NAME, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    })
+                }
             }
-
-            item { Spacer(Modifier.height(28.dp)) }
-            item { SectionTitle("תמיכה וניהול") }
-
+            item { TetherSectionTitle("הסרה") }
             item {
-                SettingsButton(
-                    icon = Icons.Default.Mail,
-                    label = "צור קשר עם המנהל",
-                    onClick = { /* TODO */ }
-                )
-            }
-
-            item {
-                SettingsButton(
-                    icon = Icons.Default.BugReport,
-                    label = "יומן אבחון (קונסולה)",
-                    onClick = onDiagnosticsClick
-                )
-            }
-
-            item {
-                SettingsButton(
-                    icon = Icons.Default.Shield,
-                    label = "שחרור בחירום",
-                    onClick = onEmergencyClick
-                )
-            }
-
-            item { Spacer(Modifier.height(28.dp)) }
-            item { SectionTitle("אודות") }
-
-            item {
-                InfoRow(
-                    icon = Icons.Default.Info,
-                    label = "גרסה",
-                    value = BuildConfig.VERSION_NAME
-                )
-            }
-
-            item { Spacer(Modifier.height(40.dp)) }
-
-            item {
-                if (isUninstallWindowOpen) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(20.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    "המנהל אישר הסרת האפליקציה",
-                                    fontFamily = SblHebrew,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontSize = 16.sp
-                                )
-                            }
-                            Spacer(Modifier.height(16.dp))
-                            Button(
-                                onClick = {
-                                    context.startActivity(
-                                        Intent(Intent.ACTION_DELETE).apply {
-                                            data = Uri.parse("package:${context.packageName}")
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                    )
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(Icons.Default.Warning, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("הסר עכשיו", fontFamily = SblHebrew, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                } else {
-                    Button(
-                        onClick = { showUninstallDialog = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.08f),
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = null,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
-                    ) {
-                        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("פתיחת חלון הסרה", fontFamily = SblHebrew, fontWeight = FontWeight.Bold)
+                TetherSettingsGroup {
+                    if (isUninstallWindowOpen) {
+                        TetherPreferenceRow("המנהל אישר הסרה", Icons.Default.CheckCircle)
+                        TetherGroupDivider()
+                        TetherPreferenceRow("הסר את האפליקציה", Icons.Default.Warning, destructive = true,
+                            onClick = {
+                                context.startActivity(Intent(Intent.ACTION_DELETE).apply {
+                                    data = Uri.parse("package:${context.packageName}")
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                })
+                            })
+                    } else {
+                        TetherPreferenceRow("פתיחת חלון הסרה", Icons.Default.Warning, destructive = true,
+                            onClick = { showUninstallDialog = true })
                     }
                 }
             }
+            item { Spacer(Modifier.height(28.dp)) }
         }
     }
 }
-
-@Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text = text,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.Bold,
-        fontFamily = BaHaYetzira,
-        color = Primary,
-        modifier = Modifier.padding(vertical = 12.dp)
-    )
-}
-
-@Composable
-private fun InfoRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, null, tint = Muted, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(16.dp))
-        Text(label, fontSize = 16.sp, fontFamily = SblHebrew, modifier = Modifier.weight(1f), color = Ink)
-        Text(value, fontSize = 14.sp, fontFamily = SblHebrew, color = Muted)
-    }
-    HorizontalDivider(color = LineColor.copy(alpha = 0.6f), thickness = 0.5.dp)
-}
-
-@Composable
-private fun ToggleRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, null, tint = Muted, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, fontSize = 16.sp, fontFamily = SblHebrew, color = Ink)
-            Text(
-                description,
-                fontSize = 12.sp,
-                fontFamily = SblHebrew,
-                color = Muted
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Primary,
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = LineColor
-            )
-        )
-    }
-    HorizontalDivider(color = LineColor.copy(alpha = 0.6f), thickness = 0.5.dp)
-}
-
-@Composable
-private fun SettingsButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    TextButton(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(0.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(icon, null, tint = Muted, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(16.dp))
-            Text(label, fontSize = 16.sp, fontFamily = SblHebrew, modifier = Modifier.weight(1f), color = Ink)
-            Icon(Icons.Default.ChevronLeft, null, tint = LineColor, modifier = Modifier.size(16.dp))
-        }
-    }
-    HorizontalDivider(color = LineColor.copy(alpha = 0.6f), thickness = 0.5.dp)
-}
-

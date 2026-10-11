@@ -23,10 +23,10 @@ fun RabbenuTamScreen(onBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFDFBF7))
+            .background(Color(0xFFFFFFFF))
             .statusBarsPadding()
     ) {
-        Surface(shadowElevation = 0.dp, color = Color(0xFFFDFBF7)) {
+        Surface(shadowElevation = 0.dp, color = Color(0xFFFFFFFF)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -42,7 +42,7 @@ fun RabbenuTamScreen(onBack: () -> Unit) {
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = Primary,
                     maxLines = 1
                 )
@@ -65,7 +65,7 @@ fun RabbenuTamScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
                         textAlign = TextAlign.Center,
                         fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontFamily = SblHebrew,
                         color = Color(0xFF1A1A1A),
                         style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)

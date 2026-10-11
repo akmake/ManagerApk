@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.admin
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherCard as Card
+
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -74,7 +78,7 @@ fun ProvisioningQrScreen(onBack: () -> Unit) {
         ) {
             Text(
                 text = "הוראות למשתמש חדש",
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 20.sp
             )
 
@@ -128,7 +132,7 @@ private fun StepRow(number: String, text: String) {
             Text(
                 number,
                 color = MaterialTheme.colorScheme.onPrimary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
             )

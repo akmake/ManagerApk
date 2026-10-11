@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.zmanim
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherButton as Button
+import com.sterni.tether.ui.components.TetherOutlinedButton as OutlinedButton
+
 import android.app.Activity
 import android.media.RingtoneManager
 import android.net.Uri
@@ -59,7 +63,7 @@ fun ZmanimScreen(
                 .background(BgColor)
                 .padding(paddingValues)
         ) {
-            Surface(shadowElevation = 0.dp, color = Color(0xFFFDFBF7)) {
+            Surface(shadowElevation = 0.dp, color = Color(0xFFFFFFFF)) {
                 Column {
                     Spacer(Modifier.statusBarsPadding())
                     Row(
@@ -77,7 +81,7 @@ fun ZmanimScreen(
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Center,
                             fontSize = 19.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = Primary
                         )
                         Spacer(Modifier.width(48.dp))
@@ -96,7 +100,7 @@ fun ZmanimScreen(
                     OutlinedButton(
                         onClick = { vm.selectCity(idx) },
                         modifier = Modifier.weight(1f).height(36.dp),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = if (selected) Primary else Color.Transparent,
                             contentColor   = if (selected) Color.White else Muted
@@ -112,9 +116,9 @@ fun ZmanimScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(18.dp),
                 shadowElevation = 0.dp,
-                color = Color(0xFFFDFBF7),
+                color = Color(0xFFFFFFFF),
                 border = androidx.compose.foundation.BorderStroke(1.dp, LineColor.copy(alpha = 0.5f))
             ) {
                 Row(
@@ -130,7 +134,7 @@ fun ZmanimScreen(
                     Text(
                         text = HebrewDate.format(state.date),
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontFamily = BaHaYetzira,
                         color = Primary
                     )
@@ -196,7 +200,7 @@ fun ZmanimScreen(
                                     fontSize = 18.sp,
                                     color = Primary,
                                     fontFamily = FontFamily.Monospace,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                             HorizontalDivider(
@@ -284,7 +288,7 @@ fun AlarmSetupBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFFFDFBF7)
+        containerColor = Color(0xFFFFFFFF)
     ) {
         Column(
             modifier = Modifier
@@ -296,7 +300,7 @@ fun AlarmSetupBottomSheet(
             Text(
                 text = "שעון מעורר קבוע לזמן הלכתי",
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = Primary,
                 textAlign = TextAlign.Center
             )
@@ -321,17 +325,17 @@ fun AlarmSetupBottomSheet(
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { if (offsetMinutes > 0) offsetMinutes-- }) {
-                    Text("−", fontSize = 24.sp, color = Primary, fontWeight = FontWeight.Bold)
+                    Text("−", fontSize = 24.sp, color = Primary, fontWeight = FontWeight.SemiBold)
                 }
                 Text(
                     text = "$offsetMinutes דקות",
                     fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.width(100.dp),
                     textAlign = TextAlign.Center
                 )
                 IconButton(onClick = { if (offsetMinutes < 60) offsetMinutes++ }) {
-                    Text("+", fontSize = 24.sp, color = Primary, fontWeight = FontWeight.Bold)
+                    Text("+", fontSize = 24.sp, color = Primary, fontWeight = FontWeight.SemiBold)
                 }
             }
 
@@ -354,14 +358,14 @@ fun AlarmSetupBottomSheet(
                     OutlinedButton(
                         onClick = { ringCount = n },
                         modifier = Modifier.size(48.dp),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(18.dp),
                         contentPadding = PaddingValues(0.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = if (selected) Primary else Color.Transparent,
                             contentColor   = if (selected) Color.White else Primary
                         )
                     ) {
-                        Text("$n", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("$n", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -374,17 +378,17 @@ fun AlarmSetupBottomSheet(
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { if (ringDuration > 5) ringDuration -= 5 }) {
-                    Text("−", fontSize = 24.sp, color = Primary, fontWeight = FontWeight.Bold)
+                    Text("−", fontSize = 24.sp, color = Primary, fontWeight = FontWeight.SemiBold)
                 }
                 Text(
                     text = "$ringDuration שניות",
                     fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.width(100.dp),
                     textAlign = TextAlign.Center
                 )
                 IconButton(onClick = { if (ringDuration < 120) ringDuration += 5 }) {
-                    Text("+", fontSize = 24.sp, color = Primary, fontWeight = FontWeight.Bold)
+                    Text("+", fontSize = 24.sp, color = Primary, fontWeight = FontWeight.SemiBold)
                 }
             }
 

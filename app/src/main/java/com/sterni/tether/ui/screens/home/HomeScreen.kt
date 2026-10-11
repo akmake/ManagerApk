@@ -1,626 +1,192 @@
 package com.sterni.tether.ui.screens.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sterni.tether.data.model.Study
-import com.sterni.tether.ui.theme.BaHaYetzira
-import com.sterni.tether.ui.theme.Ink
-import com.sterni.tether.ui.theme.Muted
-import com.sterni.tether.ui.theme.Primary
-import com.sterni.tether.ui.theme.SblHebrew
-import java.time.DayOfWeek
+import com.sterni.tether.ui.components.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
-    onStudyClick:       (studyKey: String, date: String, title: String, label: String) -> Unit,
-    onZmanimClick:      () -> Unit = {},
-    onMamaarimClick:    () -> Unit = {},
-    onCalendarClick:    () -> Unit = {},
-    onSettingsClick:    () -> Unit = {},
-    onToolsClick:       () -> Unit = {},
-    onNewsClick:        () -> Unit = {},
-    onTefilaClick:      () -> Unit = {},
-    onPdfLibraryClick:  () -> Unit = {},
-    onEnterAdmin:       () -> Unit = {},
+    onStudyClick: (studyKey: String, date: String, title: String, label: String) -> Unit,
+    onZmanimClick: () -> Unit = {}, onMamaarimClick: () -> Unit = {}, onCalendarClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}, onToolsClick: () -> Unit = {}, onNewsClick: () -> Unit = {},
+    onTefilaClick: () -> Unit = {}, onPdfLibraryClick: () -> Unit = {}, onEnterAdmin: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val uiState     by viewModel.uiState.collectAsStateWithLifecycle()
-    var dateOffset  by remember { mutableStateOf(0) }
-    val displayDate = remember(dateOffset) { LocalDate.now().plusDays(dateOffset.toLong()) }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var dateOffset by remember { mutableIntStateOf(0) }
+    val date = remember(dateOffset) { LocalDate.now().plusDays(dateOffset.toLong()) }
+    LaunchedEffect(dateOffset) { viewModel.loadDailyStudy(date.toString()) }
+    HomeContent(state, date, onStudyClick, onZmanimClick, onMamaarimClick, onCalendarClick,
+        onSettingsClick, onToolsClick, onNewsClick, onTefilaClick, onPdfLibraryClick, onEnterAdmin,
+        onPrevDay = { dateOffset-- }, onNextDay = { dateOffset++ },
+        onRefresh = { viewModel.loadDailyStudy(date.toString()) })
+}
 
-    // Hidden admin entry — long-press the day-of-week label 5 times
-    var adminHoldCount  by remember { mutableStateOf(0) }
-    var showAdminDialog by remember { mutableStateOf(false) }
-
-    if (showAdminDialog) {
-        AlertDialog(
-            onDismissRequest = { showAdminDialog = false; adminHoldCount = 0 },
-            title  = { Text("כניסת מנהל", fontFamily = SblHebrew) },
-            text   = { Text("האם ברצונך להיכנס לממשק הניהול?", fontFamily = SblHebrew) },
-            confirmButton = {
-                TextButton(onClick = { showAdminDialog = false; onEnterAdmin() }) {
-                    Text("כניסה", fontFamily = SblHebrew, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAdminDialog = false; adminHoldCount = 0 }) {
-                    Text("ביטול", fontFamily = SblHebrew)
-                }
-            }
-        )
-    }
-
-    LaunchedEffect(dateOffset) {
-        viewModel.loadDailyStudy(displayDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
-    }
-
-    Scaffold(
-        containerColor = Color.White,
-        contentWindowInsets = WindowInsets(0.dp),
+@Composable
+fun HomeContent(
+    state: HomeUiState, date: LocalDate,
+    onStudyClick: (String, String, String, String) -> Unit,
+    onZmanimClick: () -> Unit = {}, onMamaarimClick: () -> Unit = {}, onCalendarClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}, onToolsClick: () -> Unit = {}, onNewsClick: () -> Unit = {},
+    onTefilaClick: () -> Unit = {}, onPdfLibraryClick: () -> Unit = {}, onEnterAdmin: () -> Unit = {},
+    onPrevDay: () -> Unit = {}, onNextDay: () -> Unit = {}, onRefresh: () -> Unit = {}
+) {
+    var secretHolds by remember { mutableIntStateOf(0) }
+    TetherScaffold(
+        topBar = { HomeHeader(date, state.hebrewDate, onSettingsClick, onRefresh, onPrevDay, onNextDay,
+            onSecretHold = { if (++secretHolds >= 5) { secretHolds = 0; onEnterAdmin() } }, onAdminClick = onEnterAdmin) },
         bottomBar = {
-            Column(Modifier.background(Color.White)) {
-                HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 0.5.dp)
-                NavigationBar(
-                    containerColor = Color.White,
-                    tonalElevation = 0.dp,
-                    modifier       = Modifier.navigationBarsPadding()
-                ) {
-                    NavigationBarItem(
-                        selected = true,
-                        onClick  = {},
-                        icon     = { Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(22.dp)) },
-                        label    = { Text("בית", fontSize = 11.sp, fontFamily = SblHebrew) },
-                        colors   = navColors()
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick  = onZmanimClick,
-                        icon     = { Icon(Icons.Default.AccessTime, contentDescription = null, modifier = Modifier.size(22.dp)) },
-                        label    = { Text("זמנים", fontSize = 11.sp, fontFamily = SblHebrew) },
-                        colors   = navColors()
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick  = onNewsClick,
-                        icon     = { Icon(androidx.compose.material.icons.Icons.Default.Feed, contentDescription = null, modifier = Modifier.size(22.dp)) },
-                        label    = { Text("חדשות", fontSize = 11.sp, fontFamily = SblHebrew) },
-                        colors   = navColors()
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick  = onCalendarClick,
-                        icon     = { Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(22.dp)) },
-                        label    = { Text("לוח", fontSize = 11.sp, fontFamily = SblHebrew) },
-                        colors   = navColors()
-                    )
-                }
+            TetherNavigationBar {
+                TetherNavigationBarItem(true, {}, { Icon(Icons.Default.Home, null) }, label = { Text("בית") })
+                TetherNavigationBarItem(false, onZmanimClick, { Icon(Icons.Default.Schedule, null) }, label = { Text("זמנים") })
+                TetherNavigationBarItem(false, onNewsClick, { Icon(Icons.Default.Feed, null) }, label = { Text("חדשות") })
+                TetherNavigationBarItem(false, onCalendarClick, { Icon(Icons.Default.CalendarMonth, null) }, label = { Text("לוח") })
             }
         }
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            when {
-                uiState.isLoading -> LazyColumn(
-                    modifier       = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    item { SkeletonHeader() }
-                    item { SkeletonQuickRow() }
-                    items(6) { index ->
-                        SkeletonStudyRow()
-                        if (index < 5) HorizontalDivider(
-                            modifier  = Modifier.padding(start = 19.dp),
-                            color     = Color(0xFFF0F0F0),
-                            thickness = 0.5.dp
-                        )
+    ) { padding ->
+        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
+            item { TetherSectionTitle("גישה מהירה", Modifier.padding(top = 0.dp)) }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        HomeShortcut("תפילה", Icons.AutoMirrored.Filled.MenuBook, onTefilaClick, Modifier.weight(1f))
+                        HomeShortcut("מאמרים", Icons.Default.Article, onMamaarimClick, Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        HomeShortcut("ספרייה", Icons.Default.LibraryBooks, onPdfLibraryClick, Modifier.weight(1f))
+                        HomeShortcut("כלים", Icons.Default.Tune, onToolsClick, Modifier.weight(1f))
                     }
                 }
-                uiState.error != null -> ErrorState(
-                    message  = uiState.error!!,
-                    onRetry  = { viewModel.loadDailyStudy(displayDate.format(DateTimeFormatter.ISO_LOCAL_DATE)) },
-                    modifier = Modifier.align(Alignment.Center)
-                )
-                else -> {
-                    val orderedKeys    = listOf("chumash", "tehillim", "tanya", "rambam", "rambamOne", "shnayimMikra")
-                    val orderedStudies = orderedKeys.mapNotNull { key -> uiState.studies[key]?.let { key to it } }
-
-                    LazyColumn(
-                        modifier       = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 24.dp)
-                    ) {
-                        item {
-                            HomeHeader(
-                                displayDate     = displayDate,
-                                hebrewDate      = uiState.hebrewDate,
-                                onSettingsClick = onSettingsClick,
-                                onRefreshClick  = {
-                                    viewModel.loadDailyStudy(displayDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
-                                },
-                                onPrevDay = { dateOffset-- },
-                                onNextDay = { dateOffset++ },
-                                onSecretHold = {
-                                    adminHoldCount++
-                                    if (adminHoldCount >= 5) showAdminDialog = true
-                                }
-                            )
-                        }
-
-                        item {
-                            QuickAccessRow(
-                                onMamaarimClick   = onMamaarimClick,
-                                onTefilaClick     = onTefilaClick,
-                                onPdfLibraryClick = onPdfLibraryClick,
-                                onToolsClick      = onToolsClick,
-                                modifier          = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                            )
-                        }
-
-                        item {
-                            Text(
-                                text          = "לימוד היום",
-                                modifier      = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                                fontSize      = 11.sp,
-                                fontWeight    = FontWeight.SemiBold,
-                                color         = Muted.copy(alpha = 0.6f),
-                                fontFamily    = SblHebrew,
-                                letterSpacing = 0.8.sp
-                            )
-                        }
-
-                        itemsIndexed(orderedStudies, key = { _, pair -> pair.first }) { index, (key, study) ->
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = slideInVertically(
-                                    initialOffsetY = { 30 + index * 10 },
-                                    animationSpec  = tween(300, delayMillis = index * 35)
-                                ) + fadeIn(animationSpec = tween(300, delayMillis = index * 35))
-                            ) {
-                                StudyRow(
-                                    studyKey = key,
-                                    study    = study,
-                                    onClick  = {
-                                        if (study.available == true) {
-                                            onStudyClick(key, uiState.date, study.title ?: "", study.label ?: "")
-                                        }
-                                    }
-                                )
+            }
+            item { TetherSectionTitle("לימודי היום") }
+            when {
+                state.isLoading -> item {
+                    TetherSettingsGroup {
+                        repeat(4) { index ->
+                            Column(Modifier.fillMaxWidth().padding(vertical = 18.dp)) {
+                                Box(Modifier.fillMaxWidth(0.5f).height(16.dp).clip(CircleShape).background(MaterialTheme.colorScheme.outlineVariant))
+                                Spacer(Modifier.height(10.dp))
+                                Box(Modifier.fillMaxWidth(0.8f).height(12.dp).clip(CircleShape).background(MaterialTheme.colorScheme.outlineVariant))
                             }
-                            if (index < orderedStudies.size - 1) {
-                                HorizontalDivider(
-                                    modifier  = Modifier.padding(start = 19.dp),
-                                    color     = Color(0xFFF0F0F0),
-                                    thickness = 0.5.dp
-                                )
-                            }
+                            if (index < 3) TetherGroupDivider()
+                        }
+                    }
+                }
+                state.error != null -> item { HomeError(state.error, onRefresh) }
+                else -> item {
+                    val keys = listOf("chumash", "tehillim", "tanya", "rambam", "rambamOne", "shnayimMikra")
+                    val studies = keys.mapNotNull { key -> state.studies[key]?.let { key to it } }
+                    TetherSettingsGroup {
+                        if (studies.isEmpty()) TetherPreferenceRow("אין לימודים זמינים לתאריך הזה", Icons.AutoMirrored.Filled.MenuBook)
+                        studies.forEachIndexed { index, (key, study) ->
+                            StudyItem(study) { onStudyClick(key, state.date, study.title.orEmpty(), study.label.orEmpty()) }
+                            if (index < studies.lastIndex) TetherGroupDivider()
                         }
                     }
                 }
             }
+            item { Spacer(Modifier.height(24.dp)) }
         }
     }
 }
-
-// ── Nav colors ────────────────────────────────────────────────────────────────
-
-@Composable
-private fun navColors() = NavigationBarItemDefaults.colors(
-    selectedIconColor   = Primary,
-    selectedTextColor   = Primary,
-    indicatorColor      = Color.Transparent,
-    unselectedIconColor = Muted.copy(alpha = 0.45f),
-    unselectedTextColor = Muted.copy(alpha = 0.45f)
-)
-
-// ── Header ────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeHeader(
-    displayDate:     LocalDate,
-    hebrewDate:      String,
-    onSettingsClick: () -> Unit,
-    onRefreshClick:  () -> Unit,
-    onPrevDay:       () -> Unit,
-    onNextDay:       () -> Unit,
-    onSecretHold:    () -> Unit = {}
+    displayDate: LocalDate, hebrewDate: String, onSettingsClick: () -> Unit,
+    onRefreshClick: () -> Unit, onPrevDay: () -> Unit, onNextDay: () -> Unit,
+    onSecretHold: () -> Unit = {}, onAdminClick: () -> Unit = {}
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth().background(Color.White)
-    ) {
-        Spacer(Modifier.statusBarsPadding())
-
-        // Row 1 — settings + refresh above the date (as requested)
-        Row(
-            modifier              = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-                .height(48.dp),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment     = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onRefreshClick, modifier = Modifier.size(48.dp)) {
-                Icon(
-                    imageVector        = Icons.Rounded.Refresh,
-                    contentDescription = "רענן",
-                    tint               = Muted.copy(alpha = 0.5f),
-                    modifier           = Modifier.size(20.dp)
-                )
-            }
-            IconButton(onClick = onSettingsClick, modifier = Modifier.size(48.dp)) {
-                Icon(
-                    imageVector        = Icons.Rounded.Settings,
-                    contentDescription = "הגדרות",
-                    tint               = Muted.copy(alpha = 0.5f),
-                    modifier           = Modifier.size(20.dp)
-                )
-            }
+    Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 10.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Tether", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            HeaderAction(Icons.Default.ManageAccounts, "אזור מנהל", onAdminClick)
+            Spacer(Modifier.width(6.dp))
+            HeaderAction(Icons.Default.Refresh, "רענן", onRefreshClick)
+            Spacer(Modifier.width(6.dp))
+            HeaderAction(Icons.Default.Settings, "הגדרות", onSettingsClick)
         }
-
-        // Row 2 — date navigation (day + Hebrew date)
-        Row(
-            modifier              = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-                .padding(bottom = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment     = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onPrevDay, modifier = Modifier.size(44.dp)) {
-                Icon(
-                    Icons.Default.KeyboardArrowRight,
-                    contentDescription = "יום קודם",
-                    tint               = Muted.copy(alpha = 0.4f),
-                    modifier           = Modifier.size(26.dp)
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text       = displayDate.toHebrewDayOfWeek(),
-                    fontSize   = 12.sp,
-                    fontFamily = SblHebrew,
-                    color      = Muted,
-                    fontWeight = FontWeight.Normal,
-                    modifier   = Modifier.combinedClickable(
-                        onClick     = {},
-                        onLongClick = onSecretHold
-                    )
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text       = com.sterni.tether.util.HebrewDate.format(
-                        displayDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                    ),
-                    fontSize   = 26.sp,
-                    fontFamily = BaHaYetzira,
-                    color      = Ink,
-                    textAlign  = TextAlign.Center
-                )
-            }
-
-            IconButton(onClick = onNextDay, modifier = Modifier.size(44.dp)) {
-                Icon(
-                    Icons.Default.KeyboardArrowLeft,
-                    contentDescription = "יום הבא",
-                    tint               = Muted.copy(alpha = 0.4f),
-                    modifier           = Modifier.size(26.dp)
-                )
-            }
-        }
-
-        HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 0.5.dp)
-    }
-}
-
-// ── Quick Access ──────────────────────────────────────────────────────────────
-
-@Composable
-private fun QuickAccessRow(
-    onMamaarimClick:   () -> Unit,
-    onTefilaClick:     () -> Unit,
-    onPdfLibraryClick: () -> Unit,
-    onToolsClick:      () -> Unit,
-    modifier:          Modifier = Modifier
-) {
-    Row(
-        modifier              = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        QuickChip(label = "מאמרים", icon = Icons.AutoMirrored.Filled.List,     onClick = onMamaarimClick,   modifier = Modifier.weight(1f))
-        QuickChip(label = "תפילה",  icon = Icons.AutoMirrored.Filled.MenuBook,  onClick = onTefilaClick,     modifier = Modifier.weight(1f))
-        QuickChip(label = "ספריה",  icon = Icons.Default.PictureAsPdf,          onClick = onPdfLibraryClick, modifier = Modifier.weight(1f))
-        QuickChip(label = "כלים",   icon = Icons.Default.Tune,                  onClick = onToolsClick,      modifier = Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun QuickChip(
-    label:    String,
-    icon:     ImageVector,
-    onClick:  () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier            = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Primary.copy(alpha = 0.07f))
-            .clickable(onClick = onClick)
-            .padding(vertical = 14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Icon(
-            imageVector        = icon,
-            contentDescription = null,
-            tint               = Primary,
-            modifier           = Modifier.size(20.dp)
-        )
-        Text(
-            text       = label,
-            fontSize   = 11.sp,
-            color      = Primary,
-            fontFamily = SblHebrew,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-// ── Study Row ─────────────────────────────────────────────────────────────────
-
-@Composable
-private fun StudyRow(
-    studyKey: String,
-    study:    Study,
-    onClick:  () -> Unit
-) {
-    val available   = study.available == true
-    val accentColor = studyAccentColor(study.accent)
-
-    Row(
-        modifier          = Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .background(if (available) Color.White else Color(0xFFFAFAFA))
-            .clickable(enabled = available, onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Accent bar — first in RTL Row = physically RIGHT side (start of reading direction)
-        Box(
-            modifier = Modifier
-                .width(3.dp)
-                .fillMaxHeight()
-                .background(if (available) accentColor else Color.Transparent)
-        )
-
-        // Content
-        Row(
-            modifier          = Modifier
-                .weight(1f)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector        = studyIcon(studyKey),
-                contentDescription = null,
-                tint               = if (available) accentColor else Muted.copy(alpha = 0.35f),
-                modifier           = Modifier.size(22.dp)
-            )
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier              = Modifier.fillMaxWidth(),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text       = study.title ?: "",
-                        fontSize   = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color      = if (available) Ink else Muted,
-                        fontFamily = SblHebrew,
-                        modifier   = Modifier.weight(1f, fill = false)
-                    )
-                    if (available && !study.label.isNullOrEmpty()) {
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text      = study.label,
-                            fontSize  = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color     = accentColor,
-                            fontFamily = SblHebrew,
-                            modifier  = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(accentColor.copy(alpha = 0.08f))
-                                .padding(horizontal = 7.dp, vertical = 2.dp),
-                            style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)
-                        )
-                    }
+        Spacer(Modifier.height(14.dp))
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onPrevDay) { Icon(Icons.Default.ChevronRight, "יום קודם") }
+                Column(Modifier.weight(1f).combinedClickable(onClick = {}, onLongClick = onSecretHold), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(displayDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")), style = MaterialTheme.typography.titleMedium)
+                    Text(hebrewDate.ifBlank { "לימוד יומי" }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-
-                if (!study.subtitle.isNullOrEmpty()) {
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        text       = study.subtitle,
-                        fontSize   = 13.sp,
-                        color      = Muted,
-                        fontFamily = SblHebrew
-                    )
-                }
-
-                if (available && !study.preview.isNullOrEmpty()) {
-                    Spacer(Modifier.height(5.dp))
-                    Text(
-                        text       = study.preview,
-                        fontSize   = 13.sp,
-                        lineHeight = 19.sp,
-                        color      = Muted.copy(alpha = 0.75f),
-                        maxLines   = 2,
-                        overflow   = TextOverflow.Ellipsis,
-                        fontFamily = SblHebrew,
-                        style      = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl)
-                    )
-                }
-
-                if (!available) {
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        text       = "לא נמצאו נתונים להיום",
-                        fontSize   = 12.sp,
-                        color      = Muted.copy(alpha = 0.45f),
-                        fontFamily = SblHebrew
-                    )
-                }
-            }
-
-            if (available) {
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    imageVector        = Icons.Default.ChevronLeft,
-                    contentDescription = null,
-                    tint               = Muted.copy(alpha = 0.25f),
-                    modifier           = Modifier.size(18.dp)
-                )
+                IconButton(onClick = onNextDay) { Icon(Icons.Default.ChevronLeft, "יום הבא") }
             }
         }
     }
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-
 @Composable
-private fun SkeletonHeader() {
-    Column(Modifier.fillMaxWidth().background(Color.White)) {
-        Spacer(Modifier.statusBarsPadding())
-        Spacer(Modifier.height(48.dp))
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp).padding(bottom = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Box(Modifier.width(80.dp).height(12.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFEEEEEE)))
-            Box(Modifier.width(180.dp).height(26.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFFE8E8E8)))
-        }
-        HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 0.5.dp)
+private fun HeaderAction(icon: ImageVector, label: String, onClick: () -> Unit) {
+    IconButton(onClick, Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainer)) {
+        Icon(icon, label, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
     }
 }
 
 @Composable
-private fun SkeletonQuickRow() {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        repeat(4) {
-            Box(
-                Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF0F0F0))
-            )
+private fun HomeShortcut(title: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier) {
+    TetherCard(modifier = modifier, onClick = onClick) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(title, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
 
 @Composable
-private fun SkeletonStudyRow() {
-    Row(
-        Modifier.fillMaxWidth().height(IntrinsicSize.Min).background(Color.White),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(Modifier.width(3.dp).fillMaxHeight().background(Color(0xFFEEEEEE)))
-        Column(Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Box(Modifier.width(120.dp).height(14.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFEEEEEE)))
-                Box(Modifier.width(60.dp).height(14.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF4F4F4)))
+private fun StudyItem(study: Study, onClick: () -> Unit) {
+    val available = study.available == true
+    TetherPreferenceRow(study.title.orEmpty(), Icons.AutoMirrored.Filled.MenuBook,
+        subtitle = if (available) study.subtitle ?: study.preview?.take(95) else "לא נמצאו נתונים להיום",
+        onClick = if (available) onClick else null,
+        trailing = {
+            if (available) Column(horizontalAlignment = Alignment.End) {
+                study.label?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall, maxLines = 2,
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 88.dp), textAlign = TextAlign.End)
+                }
+                Icon(Icons.Default.ChevronLeft, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
-            Box(Modifier.width(180.dp).height(12.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF0F0F0)))
-            Box(Modifier.fillMaxWidth(0.9f).height(12.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF4F4F4)))
-        }
-    }
+        })
 }
-
-// ── Error State ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier            = modifier.padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Icon(Icons.Default.CloudOff, contentDescription = null, tint = Muted, modifier = Modifier.size(40.dp))
-        Text("שגיאה בטעינה", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Ink, fontFamily = SblHebrew)
-        Text(message, fontSize = 14.sp, color = Muted, textAlign = TextAlign.Center, fontFamily = SblHebrew)
-        Button(
-            onClick = onRetry,
-            colors  = ButtonDefaults.buttonColors(containerColor = Primary),
-            shape   = RoundedCornerShape(10.dp)
-        ) {
-            Text("נסה שוב", fontFamily = SblHebrew, fontWeight = FontWeight.SemiBold)
+private fun HomeError(message: String, onRetry: () -> Unit) {
+    TetherCard {
+        Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Default.CloudOff, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(30.dp))
+            Text("לא ניתן לטעון את הלימודים", style = MaterialTheme.typography.titleMedium)
+            Text(message, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+            TetherButton(onRetry) { Text("נסה שוב") }
         }
     }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-private fun LocalDate.toHebrewDayOfWeek(): String = when (dayOfWeek) {
-    DayOfWeek.SUNDAY    -> "יום ראשון"
-    DayOfWeek.MONDAY    -> "יום שני"
-    DayOfWeek.TUESDAY   -> "יום שלישי"
-    DayOfWeek.WEDNESDAY -> "יום רביעי"
-    DayOfWeek.THURSDAY  -> "יום חמישי"
-    DayOfWeek.FRIDAY    -> "יום שישי"
-    DayOfWeek.SATURDAY  -> "שבת קודש"
-    else                -> ""
-}
-
-private fun studyAccentColor(accent: String?): Color = when (accent) {
-    "blue"    -> Color(0xFF0284C7)
-    "emerald" -> Color(0xFF059669)
-    "violet"  -> Color(0xFF7C3AED)
-    "amber"   -> Color(0xFFD97706)
-    else      -> Primary
-}
-
-private fun studyIcon(key: String): ImageVector = when (key) {
-    "chumash"        -> Icons.AutoMirrored.Filled.MenuBook
-    "tehillim"       -> Icons.Default.MusicNote
-    "tanya"          -> Icons.Default.Star
-    "rambam"         -> Icons.Default.School
-    "rambamOne"      -> Icons.Default.School
-    "seferHamitzvot" -> Icons.AutoMirrored.Filled.List
-    "shnayimMikra"   -> Icons.AutoMirrored.Filled.VolumeUp
-    else             -> Icons.AutoMirrored.Filled.MenuBook
 }

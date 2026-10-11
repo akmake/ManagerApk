@@ -1,5 +1,9 @@
 package com.sterni.tether.ui.screens.tools
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherTopAppBar as TopAppBar
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -129,14 +133,14 @@ fun JerusalemDirectionScreen(onBack: () -> Unit) {
     )
 
     Scaffold(
-        containerColor = Color(0xFFFDFBF7),
+        containerColor = Color(0xFFFFFFFF),
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         "כיוון ירושלים",
                         fontFamily = BaHaYetzira,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize   = 20.sp,
                         color      = Primary
                     )
@@ -146,7 +150,7 @@ fun JerusalemDirectionScreen(onBack: () -> Unit) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "חזור", tint = Primary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFFDFBF7))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFFFFFFF))
             )
         }
     ) { padding ->
@@ -197,7 +201,7 @@ fun JerusalemDirectionScreen(onBack: () -> Unit) {
                     Text(
                         text       = "ירושלים עיר הקודש",
                         fontSize   = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontFamily = BaHaYetzira,
                         color      = Primary,
                         textAlign  = TextAlign.Center
@@ -223,7 +227,7 @@ fun JerusalemDirectionScreen(onBack: () -> Unit) {
                 Button(
                     onClick = { permLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
                     colors  = ButtonDefaults.buttonColors(containerColor = Primary),
-                    shape   = RoundedCornerShape(12.dp)
+                    shape   = RoundedCornerShape(18.dp)
                 ) {
                     Text("שפר דיוק עם GPS", fontFamily = SblHebrew, fontWeight = FontWeight.SemiBold)
                 }

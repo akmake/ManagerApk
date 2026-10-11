@@ -1,5 +1,8 @@
 package com.sterni.tether.ui.screens.news
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherButton as Button
+
 import android.content.Intent
 import android.net.Uri
 import android.webkit.WebView
@@ -41,9 +44,9 @@ import com.sterni.tether.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
-private val PageBg  = Color(0xFFF2F2F7)
+private val PageBg  = Color(0xFFFFFFFF)
 private val CardBg  = Color.White
-private val Divider = Color(0xFFF0F0F0)
+private val Divider = Color(0xFFE9E9E9)
 
 private val ChannelColors = mapOf(
     "amitsegal"      to (Color(0xFF38BDF8) to Color(0xFF0284C7)),
@@ -115,7 +118,7 @@ fun NewsScreen(
                         text       = "חדשות",
                         modifier   = Modifier.weight(1f),
                         fontSize   = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontFamily = SblHebrew,
                         color      = Ink
                     )
@@ -158,7 +161,7 @@ fun NewsScreen(
                         Button(
                             onClick = { vm.loadFeed() },
                             colors  = ButtonDefaults.buttonColors(containerColor = Primary),
-                            shape   = RoundedCornerShape(10.dp)
+                            shape   = RoundedCornerShape(18.dp)
                         ) {
                             Text("נסה שוב", fontFamily = SblHebrew, fontWeight = FontWeight.SemiBold)
                         }
@@ -269,12 +272,12 @@ private fun NewsFeedCard(
                 Spacer(Modifier.width(10.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = SblHebrew, color = Ink)
+                    Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = SblHebrew, color = Ink)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         if (isRecent) Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(Color(0xFF22C55E)))
                         Text(
                             text       = timeAgo(item.date),
-                            fontSize   = 11.sp,
+                            fontSize   = 12.sp,
                             fontFamily = SblHebrew,
                             color      = if (isRecent) Color(0xFF16A34A) else Muted
                         )
@@ -298,7 +301,7 @@ private fun NewsFeedCard(
                     horizontalArrangement     = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(Icons.Default.Reply, contentDescription = null, tint = Muted.copy(0.4f), modifier = Modifier.size(12.dp))
-                    Text("הועבר מ ${item.forwardedFrom?.name ?: ""}", fontSize = 11.sp, fontFamily = SblHebrew, color = Muted.copy(alpha = 0.6f))
+                    Text("הועבר מ ${item.forwardedFrom?.name ?: ""}", fontSize = 12.sp, fontFamily = SblHebrew, color = Muted.copy(alpha = 0.6f))
                 }
             }
 
@@ -456,11 +459,11 @@ private fun NewsFeedCard(
                 when {
                     articleLoading -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         listOf(1f, 0.88f, 0.65f).forEach { w ->
-                            Box(modifier = Modifier.fillMaxWidth(w).height(13.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF4F4F5)))
+                            Box(modifier = Modifier.fillMaxWidth(w).height(13.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF6F6F6)))
                         }
                     }
                     articleError -> Column(
-                        modifier            = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFFFF1F2)).padding(14.dp),
+                        modifier            = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFFFFF1F2)).padding(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
@@ -494,7 +497,7 @@ private fun ArticleContentView(
                 model = ImageRequest.Builder(LocalContext.current).data(imgUrl).crossfade(true).build(),
                 contentDescription = null,
                 contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFF8FAFC))
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFFF8FAFC))
             )
         }
 
@@ -508,7 +511,7 @@ private fun ArticleContentView(
                             loadUrl("https://www.youtube.com/embed/${embed.videoId}?playsinline=1")
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(10.dp))
+                    modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(18.dp))
                 )
             }
         }
@@ -528,7 +531,7 @@ private fun ArticleContentView(
                         loadDataWithBaseURL("https://twitter.com", html, "text/html", "utf-8", null)
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(10.dp))
+                modifier = Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(18.dp))
             )
         }
 
@@ -546,15 +549,15 @@ private fun ArticleContentView(
         if (!content.comments.isNullOrEmpty()) {
             HorizontalDivider(color = Divider, thickness = 0.5.dp)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("תגובות", fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = SblHebrew, color = Ink)
-                Text("${content.comments!!.size}", fontSize = 11.sp, fontFamily = SblHebrew, color = Muted)
+                Text("תגובות", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = SblHebrew, color = Ink)
+                Text("${content.comments!!.size}", fontSize = 12.sp, fontFamily = SblHebrew, color = Muted)
             }
             content.comments!!.forEachIndexed { i, comment ->
                 Row(
-                    modifier              = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0xFFF8F8F8)).padding(10.dp),
+                    modifier              = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFFF8F8F8)).padding(10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("${i + 1}", fontSize = 11.sp, fontFamily = SblHebrew, color = Muted, modifier = Modifier.width(18.dp))
+                    Text("${i + 1}", fontSize = 12.sp, fontFamily = SblHebrew, color = Muted, modifier = Modifier.width(18.dp))
                     Text(comment, fontSize = 13.sp, fontFamily = SblHebrew, color = Color(0xFF4B5563), lineHeight = 20.sp,
                         style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl))
                 }
@@ -586,7 +589,7 @@ private fun SkeletonCard() {
             Spacer(Modifier.width(10.dp))
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(modifier = Modifier.width(88.dp).height(12.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFEEEEEE)))
-                Box(modifier = Modifier.width(50.dp).height(10.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF4F4F5)))
+                Box(modifier = Modifier.width(50.dp).height(10.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF6F6F6)))
             }
         }
         Spacer(Modifier.height(14.dp))

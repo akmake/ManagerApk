@@ -1,5 +1,8 @@
 package com.sterni.tether.ui.navigation
 
+import com.sterni.tether.ui.components.TetherScaffold as Scaffold
+import com.sterni.tether.ui.components.TetherNavigationBarItem as NavigationBarItem
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Pending
@@ -9,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -71,6 +75,7 @@ fun AdminNavGraph(
     val currentRoute = backStackEntry?.destination?.route
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (currentRoute in bottomNavRoutes) {
                 NavigationBar {
@@ -145,6 +150,9 @@ fun AdminNavGraph(
                     },
                     onGlobalOverviewClick = {
                         navController.navigate(AdminScreen.GlobalOverview.route)
+                    },
+                    onManageAdminsClick = {
+                        navController.navigate(AdminScreen.ManageAdmins.route)
                     },
                     onApprovedAppsClick = {
                         navController.navigate(AdminScreen.ApprovedAppsCatalog.route)
